@@ -1,0 +1,195 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    function isModerator() {
+      return isAuthenticated() && (
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isModerator == true ||
+        isAdmin()
+      );
+    }
+
+    function isNotBanned() {
+      return isAuthenticated() && (
+        !exists(/databases/$(database)/documents/users/$(request.auth.uid)) ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isBanned != true
+      );
+    }
+
+    // Users collection
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Discussions (forum posts)
+    match /discussions/{discussionId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isOwner(resource.data.authorId) || isModerator();
+
+      // Nested comments subcollection
+      match /comments/{commentId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated();
+        allow update: if isAuthenticated();
+        allow delete: if isOwner(resource.data.authorId) || isModerator();
+      }
+    }
+
+    // Chats collection
+    match /chats/{chatId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isOwner(resource.data.createdBy) || isAdmin();
+
+      // Messages subcollection with real-time access
+      match /messages/{messageId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated();
+        allow update: if isOwner(resource.data.senderId);
+        allow delete: if isOwner(resource.data.senderId) || isModerator();
+      }
+    }
+
+    // Events collection
+    match /events/{eventId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isOwner(resource.data.createdBy) || isModerator();
+    }
+
+    // Jokes collection (user-submitted only)
+    match /jokes/{jokeId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isOwner(resource.data.authorId) || isModerator();
+    }
+
+    // Friendships collection
+    match /friendships/{friendshipId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isAuthenticated();
+    }
+
+    // Friend Requests collection
+    match /friendRequests/{requestId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isAuthenticated();
+    }
+
+    // Notifications collection
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isAuthenticated();
+    }
+
+    // Content Reports (Admin only read, authenticated create)
+    match /contentReports/{reportId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isAuthenticated();
+    }
+
+    // Moderation Log (Admin only)
+    match /moderationLog/{logId} {
+      allow read: if isModerator();
+      allow create: if isModerator();
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // Analytics (Admin only read, system write)
+    match /analytics/{docId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    // Polls collection
+    match /polls/{pollId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isOwner(resource.data.authorId) || isModerator();
+    }
+
+    // Daily Spins (user's daily spin wheel data)
+    match /dailySpins/{userId} {
+      allow read: if isOwner(userId);
+      allow write: if isOwner(userId);
+    }
+
+    // Streaks (login streak tracking)
+    match /streaks/{userId} {
+      allow read: if isOwner(userId);
+      allow write: if isOwner(userId);
+    }
+
+    // Recipes collection
+    match /recipes/{recipeId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isOwner(resource.data.authorId) || isModerator();
+    }
+
+    // Dad Hacks/Tips collection
+    match /dadHacks/{hackId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isOwner(resource.data.authorId) || isModerator();
+    }
+
+    // Weekly Challenges
+    match /challenges/{challengeId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin();
+      allow update: if isAuthenticated();
+      allow delete: if isAdmin();
+
+      // Challenge submissions
+      match /submissions/{submissionId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated();
+        allow update: if isOwner(resource.data.userId);
+        allow delete: if isOwner(resource.data.userId) || isAdmin();
+      }
+    }
+
+    // Game scores
+    match /gameScores/{scoreId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isOwner(resource.data.userId);
+      allow delete: if false;
+    }
+  }
+}
