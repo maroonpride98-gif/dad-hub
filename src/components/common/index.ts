@@ -31,3 +31,10 @@ export { Tooltip, FeatureHint } from './Tooltip';
 export { NewFeatureBadge, NotificationDot, ShimmerHighlight } from './NewFeatureBadge';
 export { ErrorBoundary } from './ErrorBoundary';
 export { ToastContainer } from './Toast';
+export {
+  ShareButton,
+  ShareAchievementCard,
+  PostShareButton,
+  BadgeShareButton,
+  LevelUpShareButton,
+} from './ShareButton';

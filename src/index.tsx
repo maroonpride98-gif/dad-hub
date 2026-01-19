@@ -13,6 +13,7 @@ import { StoriesProvider } from './context/StoriesContext';
 import { ToastProvider } from './context/ToastContext';
 import { PresenceProvider } from './context/PresenceContext';
 import { OnboardingProvider } from './context/OnboardingContext';
+import { ReferralProvider } from './context/ReferralContext';
 import { AuthWrapper } from './components/auth';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
@@ -23,7 +24,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           <AuthWrapper>
             <PresenceProvider>
               <OnboardingProvider>
-                <AdminProvider>
+                <ReferralProvider>
+                  <AdminProvider>
                   <NotificationProvider>
                     <FriendsProvider>
                       <GamificationProvider>
@@ -38,6 +40,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
                     </FriendsProvider>
                   </NotificationProvider>
                 </AdminProvider>
+                </ReferralProvider>
               </OnboardingProvider>
             </PresenceProvider>
           </AuthWrapper>
