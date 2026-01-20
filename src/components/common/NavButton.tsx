@@ -8,6 +8,7 @@ interface NavButtonProps {
   label: string;
   isActive: boolean;
   onClick: () => void;
+  badge?: number;
 }
 
 export const NavButton: React.FC<NavButtonProps> = ({
@@ -15,6 +16,7 @@ export const NavButton: React.FC<NavButtonProps> = ({
   label,
   isActive,
   onClick,
+  badge,
 }) => {
   const { theme } = useTheme();
 
@@ -22,6 +24,7 @@ export const NavButton: React.FC<NavButtonProps> = ({
     <button
       onClick={onClick}
       style={{
+        position: 'relative',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -39,6 +42,28 @@ export const NavButton: React.FC<NavButtonProps> = ({
     >
       <span style={{ fontSize: '24px' }}>{icon}</span>
       <span style={{ fontSize: '11px', letterSpacing: '0.5px' }}>{label}</span>
+      {badge !== undefined && badge > 0 && (
+        <span
+          style={{
+            position: 'absolute',
+            top: '4px',
+            right: '8px',
+            minWidth: '18px',
+            height: '18px',
+            padding: '0 5px',
+            background: '#ef4444',
+            borderRadius: '9px',
+            fontSize: '11px',
+            fontWeight: 700,
+            color: 'white',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          {badge > 99 ? '99+' : badge}
+        </span>
+      )}
     </button>
   );
 };

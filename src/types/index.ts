@@ -16,7 +16,7 @@ export * from './story';
 export * from './wisdom';
 
 export type TabType =
-  | 'home' | 'chat' | 'board' | 'events' | 'jokes' | 'recipes' | 'hacks' | 'games'
+  | 'home' | 'inbox' | 'chat' | 'board' | 'events' | 'jokes' | 'recipes' | 'hacks' | 'games'
   | 'challenges' | 'profile' | 'admin' | 'groups' | 'wisdom' | 'leaderboard' | 'stories'
   | 'quests' | 'mentorship' | 'battles' | 'memes' | 'podcasts' | 'movies' | 'tools' | 'support' | 'watch'
   | 'settings' | 'calendar' | 'gallery' | 'goals' | 'stats';

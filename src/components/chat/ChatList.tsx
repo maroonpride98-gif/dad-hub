@@ -7,7 +7,6 @@ import { Chat } from '../../types';
 
 const ChatItem: React.FC<{ chat: Chat; onClick: () => void }> = ({ chat, onClick }) => {
   const { theme, mode } = useTheme();
-  const isDM = chat.type === 'dm';
 
   return (
     <Card hover onClick={onClick}>
@@ -19,7 +18,7 @@ const ChatItem: React.FC<{ chat: Chat; onClick: () => void }> = ({ chat, onClick
             background: `linear-gradient(135deg, ${theme.colors.background.tertiary}, ${
               mode === 'dark' ? '#57534e' : '#d6d3d1'
             })`,
-            borderRadius: isDM ? '50%' : '16px',
+            borderRadius: '16px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -53,11 +52,9 @@ const ChatItem: React.FC<{ chat: Chat; onClick: () => void }> = ({ chat, onClick
           >
             {chat.lastMessage}
           </p>
-          {!isDM && (
-            <span style={{ color: theme.colors.text.muted, fontSize: '12px' }}>
-              {chat.members} members
-            </span>
-          )}
+          <span style={{ color: theme.colors.text.muted, fontSize: '12px' }}>
+            {chat.members} members
+          </span>
         </div>
         {chat.unread > 0 && (
           <div
@@ -87,77 +84,42 @@ export const ChatList: React.FC = () => {
   const { chats, setActiveChat } = useApp();
   const [showNewChatModal, setShowNewChatModal] = useState(false);
 
-  const { dms, groups } = useMemo(() => {
-    const dms = chats.filter((chat) => chat.type === 'dm');
-    const groups = chats.filter((chat) => chat.type === 'group');
-    return { dms, groups };
+  const groups = useMemo(() => {
+    return chats.filter((chat) => chat.type === 'group');
   }, [chats]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2 style={{ margin: 0, fontSize: '24px', fontWeight: 700 }}>Messages</h2>
+        <h2 style={{ margin: 0, fontSize: '24px', fontWeight: 700 }}>Group Chats</h2>
         <Button icon="+" size="medium" onClick={() => setShowNewChatModal(true)}>
           New Group
         </Button>
       </div>
 
-      {/* Direct Messages Section */}
-      {dms.length > 0 && (
-        <div>
-          <h3
-            style={{
-              margin: '0 0 12px 0',
-              fontSize: '14px',
-              fontWeight: 600,
-              color: theme.colors.text.muted,
-              textTransform: 'uppercase',
-              letterSpacing: '1px',
-            }}
-          >
-            Direct Messages
-          </h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {dms.map((chat) => (
-              <ChatItem key={chat.id} chat={chat} onClick={() => setActiveChat(chat.id)} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Group Chats Section */}
-      <div>
-        <h3
+      {/* Group Chats */}
+      {groups.length === 0 ? (
+        <div
           style={{
-            margin: '0 0 12px 0',
-            fontSize: '14px',
-            fontWeight: 600,
+            textAlign: 'center',
+            padding: '60px 20px',
             color: theme.colors.text.muted,
-            textTransform: 'uppercase',
-            letterSpacing: '1px',
           }}
         >
-          Group Chats
-        </h3>
-        {groups.length === 0 ? (
-          <div
-            style={{
-              textAlign: 'center',
-              padding: '30px',
-              color: theme.colors.text.muted,
-            }}
-          >
-            <p>No group chats yet. Create one to get started!</p>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {groups.map((chat) => (
-              <ChatItem key={chat.id} chat={chat} onClick={() => setActiveChat(chat.id)} />
-            ))}
-          </div>
-        )}
-      </div>
+          <div style={{ fontSize: '48px', marginBottom: '16px' }}>👥</div>
+          <p style={{ margin: 0, fontSize: '16px' }}>No group chats yet</p>
+          <p style={{ margin: '8px 0 0 0', fontSize: '14px' }}>
+            Create a group to chat with multiple dads!
+          </p>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {groups.map((chat) => (
+            <ChatItem key={chat.id} chat={chat} onClick={() => setActiveChat(chat.id)} />
+          ))}
+        </div>
+      )}
 
       {/* New Chat Modal */}
       <NewChatModal isOpen={showNewChatModal} onClose={() => setShowNewChatModal(false)} />

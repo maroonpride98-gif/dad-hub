@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode, useMemo } from 'react';
 import {
   collection,
   query,
@@ -44,6 +44,10 @@ interface AppContextType {
   messages: Record<string, Message[]>;
   sendMessage: (chatId: string, text: string) => Promise<void>;
   reactToMessage: (chatId: string, messageId: string, emoji: string) => Promise<void>;
+
+  // Inbox / Unread tracking
+  totalUnreadDMs: number;
+  markChatAsRead: (chatId: string) => Promise<void>;
 
   // Discussions
   discussions: Discussion[];
@@ -148,6 +152,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
             dmPartnerId: data.dmPartnerId,
             dmPartnerName: data.dmPartnerName,
             dmPartnerAvatar: data.dmPartnerAvatar,
+            unreadCounts: data.unreadCounts || {},
+            lastReadAt: data.lastReadAt || {},
           } as Chat;
         });
         setChats(chatList);
@@ -318,6 +324,34 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     return () => unsubscribe();
   }, []);
 
+  // Calculate total unread DMs
+  const totalUnreadDMs = useMemo(() => {
+    return chats
+      .filter((chat) => chat.type === 'dm')
+      .reduce((total, chat) => {
+        const userUnread = chat.unreadCounts?.[user.uid] || 0;
+        return total + userUnread;
+      }, 0);
+  }, [chats, user.uid]);
+
+  // Mark chat as read
+  const markChatAsRead = useCallback(
+    async (chatId: string) => {
+      if (!user?.uid) return;
+
+      try {
+        const chatRef = doc(db, 'chats', chatId);
+        await updateDoc(chatRef, {
+          [`unreadCounts.${user.uid}`]: 0,
+          [`lastReadAt.${user.uid}`]: serverTimestamp(),
+        });
+      } catch (error) {
+        console.error('Error marking chat as read:', error);
+      }
+    },
+    [user?.uid]
+  );
+
   // Chat functions
   const getChatById = useCallback(
     (chatId: string) => {
@@ -423,16 +457,27 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
         // Update chat's last message
         const chatRef = doc(db, 'chats', chatId);
-        await updateDoc(chatRef, {
-          lastMessage: text,
-          lastMessageAt: serverTimestamp(),
-        });
+        const chat = getChatById(chatId);
+
+        // For DMs, increment unread count for the recipient
+        if (chat?.type === 'dm' && chat.dmPartnerId) {
+          await updateDoc(chatRef, {
+            lastMessage: text,
+            lastMessageAt: serverTimestamp(),
+            [`unreadCounts.${chat.dmPartnerId}`]: increment(1),
+          });
+        } else {
+          await updateDoc(chatRef, {
+            lastMessage: text,
+            lastMessageAt: serverTimestamp(),
+          });
+        }
       } catch (error) {
         console.error('Error sending message:', error);
         throw error;
       }
     },
-    [user.uid, user.name, user.avatar]
+    [user.uid, user.name, user.avatar, getChatById]
   );
 
   const reactToMessage = useCallback(
@@ -706,6 +751,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         messages,
         sendMessage,
         reactToMessage,
+        totalUnreadDMs,
+        markChatAsRead,
         discussions,
         likedPosts,
         toggleLike,

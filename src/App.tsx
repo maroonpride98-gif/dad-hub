@@ -45,6 +45,7 @@ const CalendarPage = lazy(() => import('./components/calendar').then(m => ({ def
 const StatsPage = lazy(() => import('./components/stats').then(m => ({ default: m.StatsPage })));
 const GalleryPage = lazy(() => import('./components/gallery').then(m => ({ default: m.GalleryPage })));
 const GoalsPage = lazy(() => import('./components/goals').then(m => ({ default: m.GoalsPage })));
+const InboxPage = lazy(() => import('./components/inbox').then(m => ({ default: m.InboxPage })));
 
 // Loading spinner component
 const PageLoader: React.FC = () => {
@@ -115,7 +116,7 @@ const App: React.FC = () => {
     if (friend) {
       const dm = await createOrGetDM(friendId, friend.friendName, friend.friendAvatar);
       setShowFriendsPanel(false);
-      setActiveTab('chat');
+      setActiveTab('inbox');
       setActiveChat(dm.id);
     }
   }, [getFriendById, createOrGetDM, setShowFriendsPanel, setActiveTab, setActiveChat]);
@@ -129,6 +130,8 @@ const App: React.FC = () => {
             <HomePage />
           </>
         );
+      case 'inbox':
+        return <InboxPage />;
       case 'chat':
         return <ChatPage />;
       case 'board':

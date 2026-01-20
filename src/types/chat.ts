@@ -17,6 +17,9 @@ export interface Chat {
   dmPartnerId?: string;
   dmPartnerName?: string;
   dmPartnerAvatar?: string;
+  // Per-user unread tracking
+  unreadCounts?: Record<string, number>;
+  lastReadAt?: Record<string, string>;
 }
 
 export interface MessageReaction {

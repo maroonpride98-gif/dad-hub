@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { TabType } from '../../types';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
+import { useApp } from '../../context/AppContext';
 import { NavButton } from '../common';
 
 interface NavItem {
@@ -18,9 +19,9 @@ interface MenuCategory {
 
 const mainNavItems: NavItem[] = [
   { tab: 'home', icon: '🏠', label: 'Home' },
-  { tab: 'chat', icon: '💬', label: 'Chat' },
+  { tab: 'inbox', icon: '📥', label: 'Inbox' },
+  { tab: 'chat', icon: '👥', label: 'Groups' },
   { tab: 'board', icon: '📋', label: 'Board' },
-  { tab: 'events', icon: '📅', label: 'Events' },
 ];
 
 const menuCategories: MenuCategory[] = [
@@ -86,6 +87,7 @@ interface BottomNavProps {
 export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onTabChange }) => {
   const { theme, mode } = useTheme();
   const { user } = useAuth();
+  const { totalUnreadDMs } = useApp();
   const [showMoreMenu, setShowMoreMenu] = useState(false);
 
   const isMoreActive = allMoreItems.some((item) => item.tab === activeTab);
@@ -205,6 +207,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onTabChange }) 
             icon={item.icon}
             label={item.label}
             isActive={activeTab === item.tab}
+            badge={item.tab === 'inbox' ? totalUnreadDMs : undefined}
             onClick={() => {
               onTabChange(item.tab);
               setShowMoreMenu(false);
