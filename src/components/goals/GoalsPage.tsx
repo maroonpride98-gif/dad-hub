@@ -32,75 +32,10 @@ const GOAL_CATEGORIES = [
   { id: 'financial', label: 'Financial', emoji: '💰', color: '#8b5cf6' },
 ];
 
-const SAMPLE_GOALS: Goal[] = [
-  {
-    id: '1',
-    title: 'Family Vacation to Disney',
-    description: 'Plan and save for a magical trip to Disney World',
-    category: 'family',
-    targetDate: new Date(Date.now() + 86400000 * 180),
-    progress: 65,
-    milestones: [
-      { id: 'm1', title: 'Research hotels', isCompleted: true, completedAt: new Date(Date.now() - 86400000 * 30) },
-      { id: 'm2', title: 'Book flights', isCompleted: true, completedAt: new Date(Date.now() - 86400000 * 15) },
-      { id: 'm3', title: 'Purchase park tickets', isCompleted: false },
-      { id: 'm4', title: 'Plan itinerary', isCompleted: false },
-    ],
-    isCompleted: false,
-    createdAt: new Date(Date.now() - 86400000 * 60),
-  },
-  {
-    id: '2',
-    title: 'Run a 5K',
-    description: 'Complete a 5K race with the family',
-    category: 'health',
-    targetDate: new Date(Date.now() + 86400000 * 90),
-    progress: 40,
-    milestones: [
-      { id: 'm1', title: 'Start couch to 5K program', isCompleted: true },
-      { id: 'm2', title: 'Run 2K without stopping', isCompleted: true },
-      { id: 'm3', title: 'Register for race', isCompleted: false },
-      { id: 'm4', title: 'Complete the race', isCompleted: false },
-    ],
-    isCompleted: false,
-    createdAt: new Date(Date.now() - 86400000 * 30),
-  },
-  {
-    id: '3',
-    title: 'Build Emergency Fund',
-    description: 'Save 3 months of expenses',
-    category: 'financial',
-    progress: 80,
-    milestones: [
-      { id: 'm1', title: 'Open savings account', isCompleted: true },
-      { id: 'm2', title: 'Save month 1', isCompleted: true },
-      { id: 'm3', title: 'Save month 2', isCompleted: true },
-      { id: 'm4', title: 'Save month 3', isCompleted: false },
-    ],
-    isCompleted: false,
-    createdAt: new Date(Date.now() - 86400000 * 90),
-  },
-  {
-    id: '4',
-    title: 'Learn Guitar',
-    description: 'Learn enough to play songs with the kids',
-    category: 'personal',
-    progress: 25,
-    milestones: [
-      { id: 'm1', title: 'Buy a guitar', isCompleted: true },
-      { id: 'm2', title: 'Learn basic chords', isCompleted: false },
-      { id: 'm3', title: 'Learn first song', isCompleted: false },
-      { id: 'm4', title: 'Play for family', isCompleted: false },
-    ],
-    isCompleted: false,
-    createdAt: new Date(Date.now() - 86400000 * 45),
-  },
-];
-
 export const GoalsPage: React.FC = () => {
   const { theme } = useTheme();
   const { user } = useAuth();
-  const [goals, setGoals] = useState<Goal[]>(SAMPLE_GOALS);
+  const [goals, setGoals] = useState<Goal[]>([]);
   const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
   const [filterCategory, setFilterCategory] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -127,7 +62,7 @@ export const GoalsPage: React.FC = () => {
         createdAt: doc.data().createdAt?.toDate() || new Date(),
       })) as Goal[];
 
-      setGoals([...SAMPLE_GOALS, ...userGoals]);
+      setGoals(userGoals);
     });
 
     return () => unsubscribe();

@@ -15,41 +15,20 @@ interface Photo {
   isFavorite?: boolean;
 }
 
-interface Album {
-  id: string;
-  name: string;
-  emoji: string;
-  coverUrl: string;
-  photoCount: number;
-}
 
-const SAMPLE_ALBUMS: Album[] = [
-  { id: 'all', name: 'All Photos', emoji: '📷', coverUrl: 'https://picsum.photos/seed/family1/300/300', photoCount: 24 },
-  { id: 'vacations', name: 'Family Vacations', emoji: '🏖️', coverUrl: 'https://picsum.photos/seed/vacation/300/300', photoCount: 8 },
-  { id: 'milestones', name: 'Milestones', emoji: '🎉', coverUrl: 'https://picsum.photos/seed/milestone/300/300', photoCount: 6 },
-  { id: 'sports', name: 'Sports & Activities', emoji: '⚽', coverUrl: 'https://picsum.photos/seed/sports/300/300', photoCount: 5 },
-  { id: 'holidays', name: 'Holidays', emoji: '🎄', coverUrl: 'https://picsum.photos/seed/holiday/300/300', photoCount: 5 },
-];
-
-const SAMPLE_PHOTOS: Photo[] = [
-  { id: '1', url: 'https://picsum.photos/seed/dad1/400/400', caption: 'Beach day with the kids', date: new Date(Date.now() - 86400000 * 2), album: 'vacations', isFavorite: true },
-  { id: '2', url: 'https://picsum.photos/seed/dad2/400/400', caption: 'First day of school', date: new Date(Date.now() - 86400000 * 30), album: 'milestones' },
-  { id: '3', url: 'https://picsum.photos/seed/dad3/400/400', caption: 'Soccer practice', date: new Date(Date.now() - 86400000 * 5), album: 'sports', isFavorite: true },
-  { id: '4', url: 'https://picsum.photos/seed/dad4/400/400', caption: 'Christmas morning', date: new Date(Date.now() - 86400000 * 60), album: 'holidays' },
-  { id: '5', url: 'https://picsum.photos/seed/dad5/400/400', caption: 'Backyard camping', date: new Date(Date.now() - 86400000 * 10), album: 'vacations' },
-  { id: '6', url: 'https://picsum.photos/seed/dad6/400/400', caption: 'Birthday party', date: new Date(Date.now() - 86400000 * 45), album: 'milestones', isFavorite: true },
-  { id: '7', url: 'https://picsum.photos/seed/dad7/400/400', caption: 'Baseball game', date: new Date(Date.now() - 86400000 * 15), album: 'sports' },
-  { id: '8', url: 'https://picsum.photos/seed/dad8/400/400', caption: 'Thanksgiving dinner', date: new Date(Date.now() - 86400000 * 90), album: 'holidays' },
-  { id: '9', url: 'https://picsum.photos/seed/dad9/400/400', caption: 'Park day', date: new Date(Date.now() - 86400000 * 7) },
-  { id: '10', url: 'https://picsum.photos/seed/dad10/400/400', caption: 'Movie night', date: new Date(Date.now() - 86400000 * 3) },
-  { id: '11', url: 'https://picsum.photos/seed/dad11/400/400', caption: 'Graduation day', date: new Date(Date.now() - 86400000 * 120), album: 'milestones' },
-  { id: '12', url: 'https://picsum.photos/seed/dad12/400/400', caption: 'Swimming lessons', date: new Date(Date.now() - 86400000 * 20), album: 'sports' },
+// Album category definitions (not user data)
+const ALBUM_CATEGORIES = [
+  { id: 'all', name: 'All Photos', emoji: '📷' },
+  { id: 'vacations', name: 'Family Vacations', emoji: '🏖️' },
+  { id: 'milestones', name: 'Milestones', emoji: '🎉' },
+  { id: 'sports', name: 'Sports & Activities', emoji: '⚽' },
+  { id: 'holidays', name: 'Holidays', emoji: '🎄' },
 ];
 
 export const GalleryPage: React.FC = () => {
   const { theme } = useTheme();
   const { user } = useAuth();
-  const [photos, setPhotos] = useState<Photo[]>(SAMPLE_PHOTOS);
+  const [photos, setPhotos] = useState<Photo[]>([]);
   const [selectedAlbum, setSelectedAlbum] = useState<string | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
   const [viewMode, setViewMode] = useState<'albums' | 'photos' | 'favorites'>('albums');
@@ -74,7 +53,7 @@ export const GalleryPage: React.FC = () => {
         date: doc.data().date?.toDate() || new Date(),
       })) as Photo[];
 
-      setPhotos([...SAMPLE_PHOTOS, ...userPhotos]);
+      setPhotos(userPhotos);
     });
 
     return () => unsubscribe();
@@ -114,6 +93,15 @@ export const GalleryPage: React.FC = () => {
     : selectedAlbum && selectedAlbum !== 'all'
     ? photos.filter(p => p.album === selectedAlbum)
     : photos;
+
+  // Helper to get album stats dynamically
+  const getAlbumStats = (albumId: string) => {
+    const albumPhotos = albumId === 'all' ? photos : photos.filter(p => p.album === albumId);
+    return {
+      photoCount: albumPhotos.length,
+      coverUrl: albumPhotos[0]?.url || '',
+    };
+  };
 
   const handleAlbumClick = (albumId: string) => {
     setSelectedAlbum(albumId);
@@ -173,7 +161,7 @@ export const GalleryPage: React.FC = () => {
             </button>
           )}
           <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 700, color: '#fff' }}>
-            {viewMode === 'favorites' ? '❤️ Favorites' : selectedAlbum ? SAMPLE_ALBUMS.find(a => a.id === selectedAlbum)?.name : '📸 Family Gallery'}
+            {viewMode === 'favorites' ? '❤️ Favorites' : selectedAlbum ? ALBUM_CATEGORIES.find(a => a.id === selectedAlbum)?.name : '📸 Family Gallery'}
           </h1>
         </div>
         <p style={{ margin: 0, fontSize: '14px', color: 'rgba(255,255,255,0.9)' }}>
@@ -220,55 +208,72 @@ export const GalleryPage: React.FC = () => {
               gap: '12px',
             }}
           >
-            {SAMPLE_ALBUMS.map((album) => (
-              <button
-                key={album.id}
-                onClick={() => handleAlbumClick(album.id)}
-                style={{
-                  position: 'relative',
-                  aspectRatio: '1',
-                  borderRadius: '16px',
-                  border: 'none',
-                  overflow: 'hidden',
-                  cursor: 'pointer',
-                  padding: 0,
-                }}
-              >
-                <img
-                  src={album.coverUrl}
-                  alt={album.name}
+            {ALBUM_CATEGORIES.map((album) => {
+              const stats = getAlbumStats(album.id);
+              return (
+                <button
+                  key={album.id}
+                  onClick={() => handleAlbumClick(album.id)}
                   style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
-                  }}
-                />
-                <div
-                  style={{
-                    position: 'absolute',
-                    inset: 0,
-                    background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 50%)',
-                  }}
-                />
-                <div
-                  style={{
-                    position: 'absolute',
-                    bottom: '12px',
-                    left: '12px',
-                    right: '12px',
-                    textAlign: 'left',
+                    position: 'relative',
+                    aspectRatio: '1',
+                    borderRadius: '16px',
+                    border: 'none',
+                    overflow: 'hidden',
+                    cursor: 'pointer',
+                    padding: 0,
+                    background: stats.coverUrl ? 'transparent' : theme.colors.background.secondary,
                   }}
                 >
-                  <p style={{ margin: '0 0 2px 0', fontSize: '20px' }}>{album.emoji}</p>
-                  <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: '#fff' }}>
-                    {album.name}
-                  </p>
-                  <p style={{ margin: 0, fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>
-                    {album.photoCount} photos
-                  </p>
-                </div>
-              </button>
-            ))}
+                  {stats.coverUrl ? (
+                    <img
+                      src={stats.coverUrl}
+                      alt={album.name}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                      }}
+                    />
+                  ) : (
+                    <div style={{
+                      width: '100%',
+                      height: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '48px',
+                    }}>
+                      {album.emoji}
+                    </div>
+                  )}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 50%)',
+                    }}
+                  />
+                  <div
+                    style={{
+                      position: 'absolute',
+                      bottom: '12px',
+                      left: '12px',
+                      right: '12px',
+                      textAlign: 'left',
+                    }}
+                  >
+                    <p style={{ margin: '0 0 2px 0', fontSize: '20px' }}>{album.emoji}</p>
+                    <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: '#fff' }}>
+                      {album.name}
+                    </p>
+                    <p style={{ margin: 0, fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>
+                      {stats.photoCount} photos
+                    </p>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         )}
 
@@ -466,7 +471,7 @@ export const GalleryPage: React.FC = () => {
                 }}
               >
                 <option value="">No Album</option>
-                {SAMPLE_ALBUMS.filter(a => a.id !== 'all').map((album) => (
+                {ALBUM_CATEGORIES.filter(a => a.id !== 'all').map((album) => (
                   <option key={album.id} value={album.id}>
                     {album.emoji} {album.name}
                   </option>

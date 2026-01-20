@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { haptics } from '../../utils/haptics';
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../../config/firebase';
 
 interface ChatMessage {
   id: string;
@@ -18,26 +20,34 @@ interface GroupChatProps {
   groupName: string;
 }
 
-// Sample messages for demo
-const SAMPLE_MESSAGES: ChatMessage[] = [
-  { id: '1', userId: 'u1', userName: 'Dave Wilson', userAvatar: '👨', content: 'Hey everyone! Who\'s up for a virtual BBQ hangout this weekend?', timestamp: new Date(Date.now() - 3600000 * 2), reactions: [{ emoji: '🔥', count: 5 }] },
-  { id: '2', userId: 'u2', userName: 'Mike Chen', userAvatar: '👴', content: 'Count me in! What time works for everyone?', timestamp: new Date(Date.now() - 3600000 * 1.5) },
-  { id: '3', userId: 'u3', userName: 'Tom Stevens', userAvatar: '🧔', content: 'Saturday afternoon would be perfect. Maybe 3pm EST?', timestamp: new Date(Date.now() - 3600000) },
-  { id: '4', userId: 'u1', userName: 'Dave Wilson', userAvatar: '👨', content: '3pm works! I\'ll set up a watch party link', timestamp: new Date(Date.now() - 1800000) },
-  { id: '5', userId: 'u4', userName: 'James Brown', userAvatar: '👦', content: 'Just joined the group! Looking forward to connecting with other dads 🎉', timestamp: new Date(Date.now() - 900000), reactions: [{ emoji: '👋', count: 3 }, { emoji: '❤️', count: 2 }] },
-];
 
-export const GroupChat: React.FC<GroupChatProps> = ({ groupId: _groupId, groupName: _groupName }) => {
+export const GroupChat: React.FC<GroupChatProps> = ({ groupId, groupName: _groupName }) => {
   const { theme } = useTheme();
   const { user } = useAuth();
-  const [messages, setMessages] = useState<ChatMessage[]>(SAMPLE_MESSAGES);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [isTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // These will be used when connecting to real backend
-  void _groupId;
   void _groupName;
+
+  // Load messages from Firebase
+  useEffect(() => {
+    const messagesRef = collection(db, 'groups', groupId, 'messages');
+    const q = query(messagesRef, orderBy('timestamp', 'asc'));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const loadedMessages = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+        timestamp: doc.data().timestamp?.toDate() || new Date(),
+      })) as ChatMessage[];
+
+      setMessages(loadedMessages);
+    });
+
+    return () => unsubscribe();
+  }, [groupId]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -59,21 +69,24 @@ export const GroupChat: React.FC<GroupChatProps> = ({ groupId: _groupId, groupNa
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
-  const handleSend = () => {
-    if (!newMessage.trim()) return;
+  const handleSend = async () => {
+    if (!newMessage.trim() || !user?.uid) return;
 
-    const message: ChatMessage = {
-      id: Date.now().toString(),
-      userId: user?.uid || 'current-user',
-      userName: user?.name || 'You',
-      userAvatar: user?.avatar || '👤',
-      content: newMessage.trim(),
-      timestamp: new Date(),
-    };
+    try {
+      const messagesRef = collection(db, 'groups', groupId, 'messages');
+      await addDoc(messagesRef, {
+        userId: user.uid,
+        userName: user.name || 'Anonymous',
+        userAvatar: user.avatar || '👤',
+        content: newMessage.trim(),
+        timestamp: serverTimestamp(),
+      });
 
-    setMessages(prev => [...prev, message]);
-    setNewMessage('');
-    haptics.light();
+      setNewMessage('');
+      haptics.light();
+    } catch (error) {
+      console.error('Error sending message:', error);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -151,7 +164,14 @@ export const GroupChat: React.FC<GroupChatProps> = ({ groupId: _groupId, groupNa
           gap: '12px',
         }}
       >
-        {messages.map((message, index) => {
+        {messages.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+            <span style={{ fontSize: '40px' }}>💬</span>
+            <p style={{ color: theme.colors.text.muted, margin: '12px 0 0 0' }}>
+              No messages yet. Start the conversation!
+            </p>
+          </div>
+        ) : messages.map((message, index) => {
           const isOwn = message.userId === (user?.uid || 'current-user');
           const showAvatar = index === 0 || messages[index - 1].userId !== message.userId;
 
@@ -265,6 +285,7 @@ export const GroupChat: React.FC<GroupChatProps> = ({ groupId: _groupId, groupNa
         })}
         <div ref={messagesEndRef} />
       </div>
+
 
       {/* Typing Indicator */}
       {isTyping && (

@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTheme } from '../../context/ThemeContext';
 import { useApp } from '../../context/AppContext';
 import { PartyRoom, WatchParty } from './PartyRoom';
 import { haptics } from '../../utils/haptics';
+import { collection, query, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../../config/firebase';
 
 type ViewMode = 'browse' | 'create' | 'room';
 
@@ -13,55 +15,6 @@ const CONTENT_TYPES = [
   { id: 'custom', label: 'Custom Stream', emoji: '🎥' },
 ] as const;
 
-const SAMPLE_PARTIES: WatchParty[] = [
-  {
-    id: '1',
-    title: 'Sunday Football Watch Party',
-    description: 'Join us for the big game! Bring your best commentary.',
-    hostId: 'host1',
-    hostName: 'SportsDad_Mike',
-    hostAvatar: '🏈',
-    contentType: 'sports',
-    contentTitle: 'NFL Sunday Night Football',
-    scheduledFor: new Date(Date.now() + 3600000),
-    status: 'scheduled',
-    participants: ['host1', 'user2', 'user3', 'user4', 'user5'],
-    maxParticipants: 20,
-    isPrivate: false,
-    createdAt: new Date(),
-  },
-  {
-    id: '2',
-    title: 'Classic Dad Movie Marathon',
-    description: 'Watching the greatest dad movies ever made.',
-    hostId: 'host2',
-    hostName: 'CinematicDad',
-    hostAvatar: '🎬',
-    contentType: 'movie',
-    contentTitle: 'Back to the Future',
-    scheduledFor: new Date(),
-    status: 'live',
-    participants: ['host2', 'user1', 'user3', 'user6'],
-    isPrivate: false,
-    createdAt: new Date(),
-  },
-  {
-    id: '3',
-    title: 'Late Night Comedy Show',
-    description: 'Winding down with some laughs after the kids are asleep.',
-    hostId: 'host3',
-    hostName: 'LateNiteDad',
-    hostAvatar: '😂',
-    contentType: 'show',
-    contentTitle: 'Stand-up Comedy Special',
-    scheduledFor: new Date(Date.now() + 86400000),
-    status: 'scheduled',
-    participants: ['host3', 'user4'],
-    maxParticipants: 10,
-    isPrivate: true,
-    createdAt: new Date(),
-  },
-];
 
 export const WatchPartyPage: React.FC = () => {
   const { theme } = useTheme();
@@ -69,7 +22,26 @@ export const WatchPartyPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('browse');
   const [selectedParty, setSelectedParty] = useState<WatchParty | null>(null);
   const [filter, setFilter] = useState<'all' | 'live' | 'scheduled'>('all');
-  const [parties] = useState<WatchParty[]>(SAMPLE_PARTIES);
+  const [parties, setParties] = useState<WatchParty[]>([]);
+
+  // Load parties from Firebase
+  useEffect(() => {
+    const partiesRef = collection(db, 'watchParties');
+    const q = query(partiesRef);
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const loadedParties = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+        scheduledFor: doc.data().scheduledFor?.toDate() || new Date(),
+        createdAt: doc.data().createdAt?.toDate() || new Date(),
+      })) as WatchParty[];
+
+      setParties(loadedParties);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   // Create form state
   const [formTitle, setFormTitle] = useState('');
@@ -89,28 +61,53 @@ export const WatchPartyPage: React.FC = () => {
     haptics.light();
   };
 
-  const handleCreateParty = () => {
+  const handleCreateParty = async () => {
     if (!formTitle.trim() || !formContentTitle.trim()) return;
 
-    const newParty: WatchParty = {
-      id: Date.now().toString(),
-      title: formTitle,
-      description: formDescription,
-      hostId: user.uid,
-      hostName: user.name,
-      hostAvatar: user.avatar,
-      contentType: formContentType,
-      contentTitle: formContentTitle,
-      scheduledFor: new Date(),
-      status: 'live',
-      participants: [user.uid],
-      isPrivate: formIsPrivate,
-      createdAt: new Date(),
-    };
+    try {
+      const partyData = {
+        title: formTitle,
+        description: formDescription,
+        hostId: user.uid,
+        hostName: user.name,
+        hostAvatar: user.avatar,
+        contentType: formContentType,
+        contentTitle: formContentTitle,
+        scheduledFor: new Date(),
+        status: 'live' as const,
+        participants: [user.uid],
+        isPrivate: formIsPrivate,
+        createdAt: serverTimestamp(),
+      };
 
-    setSelectedParty(newParty);
-    setViewMode('room');
-    haptics.success();
+      const docRef = await addDoc(collection(db, 'watchParties'), partyData);
+
+      const newParty: WatchParty = {
+        id: docRef.id,
+        title: formTitle,
+        description: formDescription,
+        hostId: user.uid,
+        hostName: user.name,
+        hostAvatar: user.avatar,
+        contentType: formContentType,
+        contentTitle: formContentTitle,
+        scheduledFor: new Date(),
+        status: 'live',
+        participants: [user.uid],
+        isPrivate: formIsPrivate,
+        createdAt: new Date(),
+      };
+
+      setSelectedParty(newParty);
+      setViewMode('room');
+      setFormTitle('');
+      setFormDescription('');
+      setFormContentTitle('');
+      setFormIsPrivate(false);
+      haptics.success();
+    } catch (error) {
+      console.error('Error creating party:', error);
+    }
   };
 
   const formatScheduledTime = (date: Date) => {

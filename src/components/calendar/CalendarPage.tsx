@@ -26,19 +26,12 @@ const EVENT_CATEGORIES = [
   { id: 'other', label: 'Other', emoji: '📌', color: '#8b5cf6' },
 ];
 
-const SAMPLE_EVENTS: CalendarEvent[] = [
-  { id: '1', title: 'Soccer Practice', date: new Date(), time: '4:00 PM', category: 'sports', kidName: 'Jake' },
-  { id: '2', title: 'Parent-Teacher Conference', date: new Date(Date.now() + 86400000 * 2), time: '3:30 PM', category: 'school', kidName: 'Emma' },
-  { id: '3', title: 'Dentist Appointment', date: new Date(Date.now() + 86400000 * 5), time: '10:00 AM', category: 'medical', kidName: 'Jake' },
-  { id: '4', title: "Emma's Birthday", date: new Date(Date.now() + 86400000 * 10), category: 'birthday', kidName: 'Emma' },
-];
-
 export const CalendarPage: React.FC = () => {
   const { theme } = useTheme();
   const { user } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [events, setEvents] = useState<CalendarEvent[]>(SAMPLE_EVENTS);
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
 
   // Form state
@@ -63,7 +56,7 @@ export const CalendarPage: React.FC = () => {
         date: doc.data().date?.toDate() || new Date(),
       })) as CalendarEvent[];
 
-      setEvents([...SAMPLE_EVENTS, ...userEvents]);
+      setEvents(userEvents);
     });
 
     return () => unsubscribe();
