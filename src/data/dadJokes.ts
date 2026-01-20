@@ -1,5 +1,7 @@
-import { DadJoke, JokeTeller } from '../types';
+import { DadJoke } from '../types';
 
+// Default jokes are built-in content for the joke feature
+// User-submitted jokes are loaded from Firebase
 export const defaultJokes: DadJoke[] = [
   { id: 'j1', joke: "I'm reading a book about anti-gravity.", punchline: "It's impossible to put down!" },
   { id: 'j2', joke: "Why don't eggs tell jokes?", punchline: "They'd crack each other up!" },
@@ -13,10 +15,4 @@ export const defaultJokes: DadJoke[] = [
   { id: 'j10', joke: "Why do seagulls fly over the ocean?", punchline: "Because if they flew over the bay, they'd be bagels." },
   { id: 'j11', joke: "What did the ocean say to the beach?", punchline: "Nothing, it just waved." },
   { id: 'j12', joke: "Why don't scientists trust atoms?", punchline: "Because they make up everything!" },
-];
-
-export const topJokeTellers: JokeTeller[] = [
-  { name: 'Punmaster Pete', jokes: 47, emoji: '👨‍🦲' },
-  { name: 'Corny Carlos', jokes: 38, emoji: '👨🏽' },
-  { name: 'Groan Greg', jokes: 31, emoji: '👨‍🦰' },
 ];

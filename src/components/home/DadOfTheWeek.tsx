@@ -1,4 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
+import { db } from '../../config/firebase';
 
 interface DadOfTheWeekData {
   name: string;
@@ -13,20 +15,57 @@ interface DadOfTheWeekData {
   quote?: string;
 }
 
-const CURRENT_DAD: DadOfTheWeekData = {
-  name: 'Mike Thompson',
-  avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=mike',
-  title: 'Grill Master',
-  achievement: 'Most helpful dad this week',
-  stats: {
-    posts: 47,
-    likes: 234,
-    streak: 28,
-  },
-  quote: "Being a dad is the greatest adventure of my life!",
-};
-
 export const DadOfTheWeek: React.FC = () => {
+  const [dadOfWeek, setDadOfWeek] = useState<DadOfTheWeekData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadDadOfWeek = async () => {
+      try {
+        // Try to load from Firebase
+        const dadRef = collection(db, 'dadOfTheWeek');
+        const q = query(dadRef, orderBy('weekOf', 'desc'), limit(1));
+        const snapshot = await getDocs(q);
+
+        if (!snapshot.empty) {
+          const data = snapshot.docs[0].data() as DadOfTheWeekData;
+          setDadOfWeek(data);
+        }
+      } catch (error) {
+        console.error('Error loading dad of the week:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadDadOfWeek();
+  }, []);
+
+  // Don't render if no dad of the week is set
+  if (isLoading) {
+    return null;
+  }
+
+  if (!dadOfWeek) {
+    return (
+      <div
+        style={{
+          background: 'linear-gradient(135deg, #fbbf24, #f59e0b)',
+          borderRadius: '20px',
+          padding: '20px',
+          textAlign: 'center',
+        }}
+      >
+        <span style={{ fontSize: '40px' }}>🏆</span>
+        <h3 style={{ margin: '12px 0 8px', fontSize: '18px', fontWeight: 700, color: '#78350f' }}>
+          Dad of the Week
+        </h3>
+        <p style={{ margin: 0, fontSize: '14px', color: '#92400e' }}>
+          Be active in the community to be featured!
+        </p>
+      </div>
+    );
+  }
   return (
     <div
       style={{
@@ -62,8 +101,8 @@ export const DadOfTheWeek: React.FC = () => {
       <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
         <div style={{ position: 'relative' }}>
           <img
-            src={CURRENT_DAD.avatar}
-            alt={CURRENT_DAD.name}
+            src={dadOfWeek.avatar}
+            alt={dadOfWeek.name}
             style={{
               width: '72px',
               height: '72px',
@@ -94,7 +133,7 @@ export const DadOfTheWeek: React.FC = () => {
 
         <div style={{ flex: 1 }}>
           <h4 style={{ margin: '0 0 4px 0', fontSize: '18px', fontWeight: 700, color: '#78350f' }}>
-            {CURRENT_DAD.name}
+            {dadOfWeek.name}
           </h4>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
             <span
@@ -107,11 +146,11 @@ export const DadOfTheWeek: React.FC = () => {
                 color: '#78350f',
               }}
             >
-              🔥 {CURRENT_DAD.title}
+              🔥 {dadOfWeek.title}
             </span>
           </div>
           <p style={{ margin: 0, fontSize: '13px', color: '#92400e' }}>
-            {CURRENT_DAD.achievement}
+            {dadOfWeek.achievement}
           </p>
         </div>
       </div>
@@ -129,26 +168,26 @@ export const DadOfTheWeek: React.FC = () => {
       >
         <div style={{ textAlign: 'center' }}>
           <p style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: '#78350f' }}>
-            {CURRENT_DAD.stats.posts}
+            {dadOfWeek.stats.posts}
           </p>
           <p style={{ margin: 0, fontSize: '11px', color: '#92400e' }}>Posts</p>
         </div>
         <div style={{ textAlign: 'center' }}>
           <p style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: '#78350f' }}>
-            {CURRENT_DAD.stats.likes}
+            {dadOfWeek.stats.likes}
           </p>
           <p style={{ margin: 0, fontSize: '11px', color: '#92400e' }}>Likes</p>
         </div>
         <div style={{ textAlign: 'center' }}>
           <p style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: '#78350f' }}>
-            {CURRENT_DAD.stats.streak}🔥
+            {dadOfWeek.stats.streak}🔥
           </p>
           <p style={{ margin: 0, fontSize: '11px', color: '#92400e' }}>Day Streak</p>
         </div>
       </div>
 
       {/* Quote */}
-      {CURRENT_DAD.quote && (
+      {dadOfWeek.quote && (
         <div
           style={{
             marginTop: '14px',
@@ -159,7 +198,7 @@ export const DadOfTheWeek: React.FC = () => {
           }}
         >
           <p style={{ margin: 0, fontSize: '13px', fontStyle: 'italic', color: '#78350f' }}>
-            "{CURRENT_DAD.quote}"
+            "{dadOfWeek.quote}"
           </p>
         </div>
       )}
