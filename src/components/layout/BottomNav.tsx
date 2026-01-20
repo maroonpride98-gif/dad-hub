@@ -11,6 +11,11 @@ interface NavItem {
   adminOnly?: boolean;
 }
 
+interface MenuCategory {
+  label: string;
+  items: NavItem[];
+}
+
 const mainNavItems: NavItem[] = [
   { tab: 'home', icon: '🏠', label: 'Home' },
   { tab: 'chat', icon: '💬', label: 'Chat' },
@@ -18,27 +23,55 @@ const mainNavItems: NavItem[] = [
   { tab: 'events', icon: '📅', label: 'Events' },
 ];
 
-const moreMenuItems: NavItem[] = [
-  { tab: 'quests', icon: '⚔️', label: 'Daily Quests' },
-  { tab: 'groups', icon: '👥', label: 'Dad Groups' },
-  { tab: 'mentorship', icon: '🤝', label: 'Mentorship' },
-  { tab: 'battles', icon: '⚡', label: 'Joke Battles' },
-  { tab: 'support', icon: '💪', label: 'Dad Support' },
-  { tab: 'watch', icon: '🎬', label: 'Watch Parties' },
-  { tab: 'wisdom', icon: '🧔', label: 'Dad Wisdom AI' },
-  { tab: 'leaderboard', icon: '🏅', label: 'Leaderboard' },
-  { tab: 'jokes', icon: '😂', label: 'Dad Jokes' },
-  { tab: 'memes', icon: '🖼️', label: 'Meme Generator' },
-  { tab: 'podcasts', icon: '🎙️', label: 'Podcasts' },
-  { tab: 'movies', icon: '🍿', label: 'Movie Night' },
-  { tab: 'recipes', icon: '🍳', label: 'Recipes' },
-  { tab: 'hacks', icon: '💡', label: 'Dad Hacks' },
-  { tab: 'tools', icon: '🔧', label: 'Dad Tools' },
-  { tab: 'games', icon: '🎮', label: 'Mini Games' },
-  { tab: 'challenges', icon: '🏆', label: 'Challenges' },
-  { tab: 'profile', icon: '👤', label: 'My Profile' },
-  { tab: 'admin', icon: '🛡️', label: 'Admin Panel', adminOnly: true },
+const menuCategories: MenuCategory[] = [
+  {
+    label: 'Social',
+    items: [
+      { tab: 'groups', icon: '👥', label: 'Dad Groups' },
+      { tab: 'mentorship', icon: '🤝', label: 'Mentorship' },
+      { tab: 'support', icon: '💪', label: 'Dad Support' },
+      { tab: 'watch', icon: '🎬', label: 'Watch Parties' },
+    ],
+  },
+  {
+    label: 'Activities',
+    items: [
+      { tab: 'quests', icon: '⚔️', label: 'Daily Quests' },
+      { tab: 'challenges', icon: '🏆', label: 'Challenges' },
+      { tab: 'battles', icon: '⚡', label: 'Joke Battles' },
+      { tab: 'leaderboard', icon: '🏅', label: 'Leaderboard' },
+    ],
+  },
+  {
+    label: 'Entertainment',
+    items: [
+      { tab: 'jokes', icon: '😂', label: 'Dad Jokes' },
+      { tab: 'memes', icon: '🖼️', label: 'Meme Generator' },
+      { tab: 'podcasts', icon: '🎙️', label: 'Podcasts' },
+      { tab: 'movies', icon: '🍿', label: 'Movie Night' },
+      { tab: 'games', icon: '🎮', label: 'Mini Games' },
+    ],
+  },
+  {
+    label: 'Resources',
+    items: [
+      { tab: 'wisdom', icon: '🧔', label: 'Dad Wisdom AI' },
+      { tab: 'recipes', icon: '🍳', label: 'Recipes' },
+      { tab: 'hacks', icon: '💡', label: 'Dad Hacks' },
+      { tab: 'tools', icon: '🔧', label: 'Dad Tools' },
+    ],
+  },
+  {
+    label: 'Account',
+    items: [
+      { tab: 'profile', icon: '👤', label: 'My Profile' },
+      { tab: 'admin', icon: '🛡️', label: 'Admin Panel', adminOnly: true },
+    ],
+  },
 ];
+
+// Flatten for checking active state
+const allMoreItems = menuCategories.flatMap((cat) => cat.items);
 
 interface BottomNavProps {
   activeTab: TabType;
@@ -50,16 +83,15 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onTabChange }) 
   const { user } = useAuth();
   const [showMoreMenu, setShowMoreMenu] = useState(false);
 
-  const isMoreActive = moreMenuItems.some((item) => item.tab === activeTab);
-
-  const visibleMoreItems = moreMenuItems.filter(
-    (item) => !item.adminOnly || (item.adminOnly && user?.isAdmin)
-  );
+  const isMoreActive = allMoreItems.some((item) => item.tab === activeTab);
 
   const handleMoreItemClick = (tab: TabType) => {
     onTabChange(tab);
     setShowMoreMenu(false);
   };
+
+  const filterItems = (items: NavItem[]) =>
+    items.filter((item) => !item.adminOnly || (item.adminOnly && user?.isAdmin));
 
   return (
     <>
@@ -82,39 +114,127 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onTabChange }) 
           style={{
             position: 'fixed',
             bottom: '90px',
+            left: '16px',
             right: '16px',
             background: theme.colors.card,
-            borderRadius: '16px',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
-            padding: '8px',
+            borderRadius: '20px',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
             zIndex: 101,
-            minWidth: '180px',
+            maxHeight: 'calc(100vh - 160px)',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
           }}
         >
-          {visibleMoreItems.map((item) => (
+          {/* Header */}
+          <div
+            style={{
+              padding: '16px 20px 12px',
+              borderBottom: `1px solid ${theme.colors.border}`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: theme.colors.text.primary }}>
+              Menu
+            </h3>
             <button
-              key={item.tab}
-              onClick={() => handleMoreItemClick(item.tab)}
+              onClick={() => setShowMoreMenu(false)}
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                padding: '12px 16px',
-                width: '100%',
-                background: activeTab === item.tab ? theme.colors.cardHover : 'transparent',
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
                 border: 'none',
-                borderRadius: '10px',
+                background: theme.colors.background.secondary,
+                color: theme.colors.text.secondary,
+                fontSize: '16px',
                 cursor: 'pointer',
-                color: activeTab === item.tab ? theme.colors.accent.primary : theme.colors.text.primary,
-                fontWeight: activeTab === item.tab ? 600 : 400,
-                fontSize: '15px',
-                textAlign: 'left',
               }}
             >
-              <span style={{ fontSize: '20px' }}>{item.icon}</span>
-              {item.label}
+              ✕
             </button>
-          ))}
+          </div>
+
+          {/* Scrollable Content */}
+          <div
+            style={{
+              flex: 1,
+              overflowY: 'auto',
+              padding: '8px 12px 16px',
+            }}
+          >
+            {menuCategories.map((category) => {
+              const visibleItems = filterItems(category.items);
+              if (visibleItems.length === 0) return null;
+
+              return (
+                <div key={category.label} style={{ marginBottom: '8px' }}>
+                  {/* Category Label */}
+                  <p
+                    style={{
+                      margin: '8px 8px 6px',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      color: theme.colors.text.muted,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                    }}
+                  >
+                    {category.label}
+                  </p>
+
+                  {/* Items Grid */}
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(2, 1fr)',
+                      gap: '6px',
+                    }}
+                  >
+                    {visibleItems.map((item) => (
+                      <button
+                        key={item.tab}
+                        onClick={() => handleMoreItemClick(item.tab)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '10px',
+                          padding: '12px',
+                          background:
+                            activeTab === item.tab
+                              ? `${theme.colors.accent.primary}15`
+                              : theme.colors.background.secondary,
+                          border:
+                            activeTab === item.tab
+                              ? `2px solid ${theme.colors.accent.primary}`
+                              : '2px solid transparent',
+                          borderRadius: '12px',
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                        }}
+                      >
+                        <span style={{ fontSize: '20px' }}>{item.icon}</span>
+                        <span
+                          style={{
+                            fontSize: '13px',
+                            fontWeight: activeTab === item.tab ? 600 : 500,
+                            color:
+                              activeTab === item.tab
+                                ? theme.colors.accent.primary
+                                : theme.colors.text.primary,
+                            lineHeight: 1.2,
+                          }}
+                        >
+                          {item.label}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
