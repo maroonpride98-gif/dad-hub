@@ -1,6 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
 import { haptics } from '../../utils/haptics';
+import { collection, query, where, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../../config/firebase';
 
 interface CalendarEvent {
   id: string;
@@ -11,6 +14,7 @@ interface CalendarEvent {
   kidName?: string;
   notes?: string;
   reminder?: boolean;
+  userId?: string;
 }
 
 const EVENT_CATEGORIES = [
@@ -31,10 +35,77 @@ const SAMPLE_EVENTS: CalendarEvent[] = [
 
 export const CalendarPage: React.FC = () => {
   const { theme } = useTheme();
+  const { user } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [events] = useState<CalendarEvent[]>(SAMPLE_EVENTS);
+  const [events, setEvents] = useState<CalendarEvent[]>(SAMPLE_EVENTS);
   const [showAddModal, setShowAddModal] = useState(false);
+
+  // Form state
+  const [newTitle, setNewTitle] = useState('');
+  const [newDate, setNewDate] = useState(new Date().toISOString().split('T')[0]);
+  const [newTime, setNewTime] = useState('');
+  const [newCategory, setNewCategory] = useState<CalendarEvent['category']>('other');
+  const [newKidName, setNewKidName] = useState('');
+  const [newNotes, setNewNotes] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!user?.uid) return;
+
+    const eventsRef = collection(db, 'calendarEvents');
+    const q = query(eventsRef, where('userId', '==', user.uid));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const userEvents = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+        date: doc.data().date?.toDate() || new Date(),
+      })) as CalendarEvent[];
+
+      setEvents([...SAMPLE_EVENTS, ...userEvents]);
+    });
+
+    return () => unsubscribe();
+  }, [user?.uid]);
+
+  const handleAddEvent = async () => {
+    if (!newTitle.trim() || !user?.uid || isSubmitting) return;
+
+    setIsSubmitting(true);
+    haptics.light();
+
+    try {
+      await addDoc(collection(db, 'calendarEvents'), {
+        userId: user.uid,
+        title: newTitle.trim(),
+        date: new Date(newDate),
+        time: newTime || null,
+        category: newCategory,
+        kidName: newKidName.trim() || null,
+        notes: newNotes.trim() || null,
+        reminder: true,
+        createdAt: serverTimestamp(),
+      });
+
+      haptics.success();
+      setShowAddModal(false);
+      resetForm();
+    } catch (error) {
+      console.error('Error adding event:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const resetForm = () => {
+    setNewTitle('');
+    setNewDate(new Date().toISOString().split('T')[0]);
+    setNewTime('');
+    setNewCategory('other');
+    setNewKidName('');
+    setNewNotes('');
+  };
 
   const getDaysInMonth = (date: Date) => {
     const year = date.getFullYear();
@@ -423,7 +494,7 @@ export const CalendarPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Add Event Modal - Placeholder */}
+      {/* Add Event Modal */}
       {showAddModal && (
         <div
           style={{
@@ -445,31 +516,192 @@ export const CalendarPage: React.FC = () => {
               padding: '24px',
               width: '100%',
               maxWidth: '400px',
+              maxHeight: '90vh',
+              overflow: 'auto',
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 style={{ margin: '0 0 16px 0', fontSize: '20px', fontWeight: 700, color: theme.colors.text.primary }}>
+            <h3 style={{ margin: '0 0 20px 0', fontSize: '20px', fontWeight: 700, color: theme.colors.text.primary }}>
               Add New Event
             </h3>
-            <p style={{ margin: '0 0 20px 0', color: theme.colors.text.muted }}>
-              Event creation coming soon!
-            </p>
-            <button
-              onClick={() => setShowAddModal(false)}
-              style={{
-                width: '100%',
-                padding: '14px',
-                borderRadius: '12px',
-                border: 'none',
-                background: theme.colors.accent.gradient,
-                color: '#fff',
-                fontSize: '16px',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
-              Close
-            </button>
+
+            {/* Title */}
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: 600, color: theme.colors.text.primary }}>
+                Event Title *
+              </label>
+              <input
+                type="text"
+                value={newTitle}
+                onChange={(e) => setNewTitle(e.target.value)}
+                placeholder="e.g., Soccer Practice"
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  background: theme.colors.background.secondary,
+                  border: `1px solid ${theme.colors.border}`,
+                  borderRadius: '10px',
+                  color: theme.colors.text.primary,
+                  fontSize: '15px',
+                }}
+              />
+            </div>
+
+            {/* Date & Time */}
+            <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: 600, color: theme.colors.text.primary }}>
+                  Date *
+                </label>
+                <input
+                  type="date"
+                  value={newDate}
+                  onChange={(e) => setNewDate(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    background: theme.colors.background.secondary,
+                    border: `1px solid ${theme.colors.border}`,
+                    borderRadius: '10px',
+                    color: theme.colors.text.primary,
+                    fontSize: '15px',
+                  }}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: 600, color: theme.colors.text.primary }}>
+                  Time
+                </label>
+                <input
+                  type="time"
+                  value={newTime}
+                  onChange={(e) => setNewTime(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    background: theme.colors.background.secondary,
+                    border: `1px solid ${theme.colors.border}`,
+                    borderRadius: '10px',
+                    color: theme.colors.text.primary,
+                    fontSize: '15px',
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Category */}
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: 600, color: theme.colors.text.primary }}>
+                Category
+              </label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                {EVENT_CATEGORIES.map((cat) => (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => setNewCategory(cat.id as CalendarEvent['category'])}
+                    style={{
+                      padding: '8px 14px',
+                      background: newCategory === cat.id ? `${cat.color}20` : theme.colors.background.secondary,
+                      border: newCategory === cat.id ? `2px solid ${cat.color}` : `1px solid ${theme.colors.border}`,
+                      borderRadius: '16px',
+                      fontSize: '13px',
+                      color: newCategory === cat.id ? cat.color : theme.colors.text.secondary,
+                      fontWeight: newCategory === cat.id ? 600 : 400,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    <span>{cat.emoji}</span>
+                    <span>{cat.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Kid Name */}
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: 600, color: theme.colors.text.primary }}>
+                Kid's Name (optional)
+              </label>
+              <input
+                type="text"
+                value={newKidName}
+                onChange={(e) => setNewKidName(e.target.value)}
+                placeholder="e.g., Jake"
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  background: theme.colors.background.secondary,
+                  border: `1px solid ${theme.colors.border}`,
+                  borderRadius: '10px',
+                  color: theme.colors.text.primary,
+                  fontSize: '15px',
+                }}
+              />
+            </div>
+
+            {/* Notes */}
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: 600, color: theme.colors.text.primary }}>
+                Notes (optional)
+              </label>
+              <textarea
+                value={newNotes}
+                onChange={(e) => setNewNotes(e.target.value)}
+                placeholder="Any additional details..."
+                style={{
+                  width: '100%',
+                  minHeight: '80px',
+                  padding: '12px',
+                  background: theme.colors.background.secondary,
+                  border: `1px solid ${theme.colors.border}`,
+                  borderRadius: '10px',
+                  color: theme.colors.text.primary,
+                  fontSize: '15px',
+                  resize: 'vertical',
+                }}
+              />
+            </div>
+
+            {/* Actions */}
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                onClick={() => setShowAddModal(false)}
+                style={{
+                  flex: 1,
+                  padding: '14px',
+                  borderRadius: '12px',
+                  border: `1px solid ${theme.colors.border}`,
+                  background: 'transparent',
+                  color: theme.colors.text.secondary,
+                  fontSize: '16px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddEvent}
+                disabled={!newTitle.trim() || isSubmitting}
+                style={{
+                  flex: 1,
+                  padding: '14px',
+                  borderRadius: '12px',
+                  border: 'none',
+                  background: !newTitle.trim() ? theme.colors.background.secondary : theme.colors.accent.gradient,
+                  color: !newTitle.trim() ? theme.colors.text.muted : '#fff',
+                  fontSize: '16px',
+                  fontWeight: 600,
+                  cursor: !newTitle.trim() ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {isSubmitting ? 'Adding...' : 'Add Event'}
+              </button>
+            </div>
           </div>
         </div>
       )}

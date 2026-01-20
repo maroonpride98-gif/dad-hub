@@ -26,20 +26,20 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
               <OnboardingProvider>
                 <ReferralProvider>
                   <AdminProvider>
-                  <NotificationProvider>
-                    <FriendsProvider>
-                      <GamificationProvider>
-                        <GroupsProvider>
-                          <StoriesProvider>
-                            <AppProvider>
-                              <App />
-                            </AppProvider>
-                          </StoriesProvider>
-                        </GroupsProvider>
-                      </GamificationProvider>
-                    </FriendsProvider>
-                  </NotificationProvider>
-                </AdminProvider>
+                    <NotificationProvider>
+                      <FriendsProvider>
+                        <GamificationProvider>
+                          <GroupsProvider>
+                            <StoriesProvider>
+                              <AppProvider>
+                                <App />
+                              </AppProvider>
+                            </StoriesProvider>
+                          </GroupsProvider>
+                        </GamificationProvider>
+                      </FriendsProvider>
+                    </NotificationProvider>
+                  </AdminProvider>
                 </ReferralProvider>
               </OnboardingProvider>
             </PresenceProvider>

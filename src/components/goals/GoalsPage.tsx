@@ -1,6 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
 import { haptics } from '../../utils/haptics';
+import { collection, query, where, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../../config/firebase';
 
 interface Goal {
   id: string;
@@ -96,10 +99,96 @@ const SAMPLE_GOALS: Goal[] = [
 
 export const GoalsPage: React.FC = () => {
   const { theme } = useTheme();
+  const { user } = useAuth();
   const [goals, setGoals] = useState<Goal[]>(SAMPLE_GOALS);
   const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
   const [filterCategory, setFilterCategory] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+
+  // Form state
+  const [newTitle, setNewTitle] = useState('');
+  const [newDescription, setNewDescription] = useState('');
+  const [newCategory, setNewCategory] = useState<Goal['category']>('personal');
+  const [newTargetDate, setNewTargetDate] = useState('');
+  const [newMilestones, setNewMilestones] = useState<string[]>(['', '', '']);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!user?.uid) return;
+
+    const goalsRef = collection(db, 'goals');
+    const q = query(goalsRef, where('userId', '==', user.uid));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const userGoals = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+        targetDate: doc.data().targetDate?.toDate(),
+        createdAt: doc.data().createdAt?.toDate() || new Date(),
+      })) as Goal[];
+
+      setGoals([...SAMPLE_GOALS, ...userGoals]);
+    });
+
+    return () => unsubscribe();
+  }, [user?.uid]);
+
+  const handleAddGoal = async () => {
+    if (!newTitle.trim() || !user?.uid || isSubmitting) return;
+
+    setIsSubmitting(true);
+    haptics.light();
+
+    try {
+      const milestones = newMilestones
+        .filter(m => m.trim())
+        .map((title, index) => ({
+          id: `m${index + 1}`,
+          title: title.trim(),
+          isCompleted: false,
+        }));
+
+      await addDoc(collection(db, 'goals'), {
+        userId: user.uid,
+        title: newTitle.trim(),
+        description: newDescription.trim() || null,
+        category: newCategory,
+        targetDate: newTargetDate ? new Date(newTargetDate) : null,
+        progress: 0,
+        milestones,
+        isCompleted: false,
+        createdAt: serverTimestamp(),
+      });
+
+      haptics.success();
+      setShowAddModal(false);
+      resetForm();
+    } catch (error) {
+      console.error('Error adding goal:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const resetForm = () => {
+    setNewTitle('');
+    setNewDescription('');
+    setNewCategory('personal');
+    setNewTargetDate('');
+    setNewMilestones(['', '', '']);
+  };
+
+  const updateMilestone = (index: number, value: string) => {
+    const updated = [...newMilestones];
+    updated[index] = value;
+    setNewMilestones(updated);
+  };
+
+  const addMilestoneField = () => {
+    if (newMilestones.length < 6) {
+      setNewMilestones([...newMilestones, '']);
+    }
+  };
 
   const filteredGoals = filterCategory
     ? goals.filter(g => g.category === filterCategory)
@@ -555,7 +644,7 @@ export const GoalsPage: React.FC = () => {
         </div>
       )}
 
-      {/* Add Goal Modal Placeholder */}
+      {/* Add Goal Modal */}
       {showAddModal && (
         <div
           style={{
@@ -576,32 +665,194 @@ export const GoalsPage: React.FC = () => {
               borderRadius: '20px',
               padding: '24px',
               width: '100%',
-              maxWidth: '400px',
+              maxWidth: '450px',
+              maxHeight: '90vh',
+              overflow: 'auto',
             }}
             onClick={e => e.stopPropagation()}
           >
-            <h3 style={{ margin: '0 0 16px 0', fontSize: '20px', fontWeight: 700, color: theme.colors.text.primary }}>
+            <h3 style={{ margin: '0 0 20px 0', fontSize: '20px', fontWeight: 700, color: theme.colors.text.primary }}>
               Add New Goal
             </h3>
-            <p style={{ margin: '0 0 20px 0', color: theme.colors.text.muted }}>
-              Goal creation coming soon!
-            </p>
-            <button
-              onClick={() => setShowAddModal(false)}
-              style={{
-                width: '100%',
-                padding: '14px',
-                borderRadius: '12px',
-                border: 'none',
-                background: theme.colors.accent.gradient,
-                color: '#fff',
-                fontSize: '16px',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
-              Close
-            </button>
+
+            {/* Title */}
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: 600, color: theme.colors.text.primary }}>
+                Goal Title *
+              </label>
+              <input
+                type="text"
+                value={newTitle}
+                onChange={(e) => setNewTitle(e.target.value)}
+                placeholder="e.g., Run a 5K"
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  background: theme.colors.background.secondary,
+                  border: `1px solid ${theme.colors.border}`,
+                  borderRadius: '10px',
+                  color: theme.colors.text.primary,
+                  fontSize: '15px',
+                }}
+              />
+            </div>
+
+            {/* Description */}
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: 600, color: theme.colors.text.primary }}>
+                Description (optional)
+              </label>
+              <textarea
+                value={newDescription}
+                onChange={(e) => setNewDescription(e.target.value)}
+                placeholder="Why is this goal important to you?"
+                style={{
+                  width: '100%',
+                  minHeight: '60px',
+                  padding: '12px',
+                  background: theme.colors.background.secondary,
+                  border: `1px solid ${theme.colors.border}`,
+                  borderRadius: '10px',
+                  color: theme.colors.text.primary,
+                  fontSize: '15px',
+                  resize: 'vertical',
+                }}
+              />
+            </div>
+
+            {/* Category */}
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: 600, color: theme.colors.text.primary }}>
+                Category
+              </label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                {GOAL_CATEGORIES.map((cat) => (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => setNewCategory(cat.id as Goal['category'])}
+                    style={{
+                      padding: '8px 14px',
+                      background: newCategory === cat.id ? `${cat.color}20` : theme.colors.background.secondary,
+                      border: newCategory === cat.id ? `2px solid ${cat.color}` : `1px solid ${theme.colors.border}`,
+                      borderRadius: '16px',
+                      fontSize: '13px',
+                      color: newCategory === cat.id ? cat.color : theme.colors.text.secondary,
+                      fontWeight: newCategory === cat.id ? 600 : 400,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    <span>{cat.emoji}</span>
+                    <span>{cat.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Target Date */}
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: 600, color: theme.colors.text.primary }}>
+                Target Date (optional)
+              </label>
+              <input
+                type="date"
+                value={newTargetDate}
+                onChange={(e) => setNewTargetDate(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  background: theme.colors.background.secondary,
+                  border: `1px solid ${theme.colors.border}`,
+                  borderRadius: '10px',
+                  color: theme.colors.text.primary,
+                  fontSize: '15px',
+                }}
+              />
+            </div>
+
+            {/* Milestones */}
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: 600, color: theme.colors.text.primary }}>
+                Milestones (optional)
+              </label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {newMilestones.map((milestone, index) => (
+                  <input
+                    key={index}
+                    type="text"
+                    value={milestone}
+                    onChange={(e) => updateMilestone(index, e.target.value)}
+                    placeholder={`Milestone ${index + 1}`}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      background: theme.colors.background.secondary,
+                      border: `1px solid ${theme.colors.border}`,
+                      borderRadius: '10px',
+                      color: theme.colors.text.primary,
+                      fontSize: '14px',
+                    }}
+                  />
+                ))}
+                {newMilestones.length < 6 && (
+                  <button
+                    type="button"
+                    onClick={addMilestoneField}
+                    style={{
+                      padding: '8px',
+                      background: 'transparent',
+                      border: `1px dashed ${theme.colors.border}`,
+                      borderRadius: '10px',
+                      color: theme.colors.text.muted,
+                      fontSize: '13px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    + Add Milestone
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                onClick={() => setShowAddModal(false)}
+                style={{
+                  flex: 1,
+                  padding: '14px',
+                  borderRadius: '12px',
+                  border: `1px solid ${theme.colors.border}`,
+                  background: 'transparent',
+                  color: theme.colors.text.secondary,
+                  fontSize: '16px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddGoal}
+                disabled={!newTitle.trim() || isSubmitting}
+                style={{
+                  flex: 1,
+                  padding: '14px',
+                  borderRadius: '12px',
+                  border: 'none',
+                  background: !newTitle.trim() ? theme.colors.background.secondary : theme.colors.accent.gradient,
+                  color: !newTitle.trim() ? theme.colors.text.muted : '#fff',
+                  fontSize: '16px',
+                  fontWeight: 600,
+                  cursor: !newTitle.trim() ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {isSubmitting ? 'Creating...' : 'Create Goal'}
+              </button>
+            </div>
           </div>
         </div>
       )}

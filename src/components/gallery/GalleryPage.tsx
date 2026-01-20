@@ -1,6 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
 import { haptics } from '../../utils/haptics';
+import { collection, query, where, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../../config/firebase';
 
 interface Photo {
   id: string;
@@ -45,15 +48,72 @@ const SAMPLE_PHOTOS: Photo[] = [
 
 export const GalleryPage: React.FC = () => {
   const { theme } = useTheme();
+  const { user } = useAuth();
+  const [photos, setPhotos] = useState<Photo[]>(SAMPLE_PHOTOS);
   const [selectedAlbum, setSelectedAlbum] = useState<string | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
   const [viewMode, setViewMode] = useState<'albums' | 'photos' | 'favorites'>('albums');
+  const [showUploadModal, setShowUploadModal] = useState(false);
+
+  // Upload form state
+  const [newPhotoUrl, setNewPhotoUrl] = useState('');
+  const [newCaption, setNewCaption] = useState('');
+  const [newAlbum, setNewAlbum] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!user?.uid) return;
+
+    const photosRef = collection(db, 'galleryPhotos');
+    const q = query(photosRef, where('userId', '==', user.uid));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const userPhotos = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+        date: doc.data().date?.toDate() || new Date(),
+      })) as Photo[];
+
+      setPhotos([...SAMPLE_PHOTOS, ...userPhotos]);
+    });
+
+    return () => unsubscribe();
+  }, [user?.uid]);
+
+  const handleUploadPhoto = async () => {
+    if (!newPhotoUrl.trim() || !user?.uid || isSubmitting) return;
+
+    setIsSubmitting(true);
+    haptics.light();
+
+    try {
+      await addDoc(collection(db, 'galleryPhotos'), {
+        userId: user.uid,
+        url: newPhotoUrl.trim(),
+        caption: newCaption.trim() || null,
+        album: newAlbum || null,
+        date: new Date(),
+        isFavorite: false,
+        createdAt: serverTimestamp(),
+      });
+
+      haptics.success();
+      setShowUploadModal(false);
+      setNewPhotoUrl('');
+      setNewCaption('');
+      setNewAlbum('');
+    } catch (error) {
+      console.error('Error uploading photo:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const filteredPhotos = viewMode === 'favorites'
-    ? SAMPLE_PHOTOS.filter(p => p.isFavorite)
+    ? photos.filter(p => p.isFavorite)
     : selectedAlbum && selectedAlbum !== 'all'
-    ? SAMPLE_PHOTOS.filter(p => p.album === selectedAlbum)
-    : SAMPLE_PHOTOS;
+    ? photos.filter(p => p.album === selectedAlbum)
+    : photos;
 
   const handleAlbumClick = (albumId: string) => {
     setSelectedAlbum(albumId);
@@ -282,6 +342,7 @@ export const GalleryPage: React.FC = () => {
 
         {/* Upload Button */}
         <button
+          onClick={() => setShowUploadModal(true)}
           style={{
             width: '100%',
             padding: '14px',
@@ -302,6 +363,156 @@ export const GalleryPage: React.FC = () => {
           📤 Upload Photos
         </button>
       </div>
+
+      {/* Upload Modal */}
+      {showUploadModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.6)',
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+          }}
+          onClick={() => setShowUploadModal(false)}
+        >
+          <div
+            style={{
+              background: theme.colors.background.primary,
+              borderRadius: '20px',
+              padding: '24px',
+              width: '100%',
+              maxWidth: '400px',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ margin: '0 0 20px 0', fontSize: '20px', fontWeight: 700, color: theme.colors.text.primary }}>
+              Add Photo
+            </h3>
+
+            {/* Photo URL */}
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: 600, color: theme.colors.text.primary }}>
+                Photo URL *
+              </label>
+              <input
+                type="url"
+                value={newPhotoUrl}
+                onChange={(e) => setNewPhotoUrl(e.target.value)}
+                placeholder="https://example.com/photo.jpg"
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  background: theme.colors.background.secondary,
+                  border: `1px solid ${theme.colors.border}`,
+                  borderRadius: '10px',
+                  color: theme.colors.text.primary,
+                  fontSize: '15px',
+                }}
+              />
+              {newPhotoUrl && (
+                <div style={{ marginTop: '10px', borderRadius: '12px', overflow: 'hidden' }}>
+                  <img
+                    src={newPhotoUrl}
+                    alt="Preview"
+                    style={{ width: '100%', maxHeight: '150px', objectFit: 'cover' }}
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Caption */}
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: 600, color: theme.colors.text.primary }}>
+                Caption (optional)
+              </label>
+              <input
+                type="text"
+                value={newCaption}
+                onChange={(e) => setNewCaption(e.target.value)}
+                placeholder="What's in this photo?"
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  background: theme.colors.background.secondary,
+                  border: `1px solid ${theme.colors.border}`,
+                  borderRadius: '10px',
+                  color: theme.colors.text.primary,
+                  fontSize: '15px',
+                }}
+              />
+            </div>
+
+            {/* Album */}
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: 600, color: theme.colors.text.primary }}>
+                Album (optional)
+              </label>
+              <select
+                value={newAlbum}
+                onChange={(e) => setNewAlbum(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  background: theme.colors.background.secondary,
+                  border: `1px solid ${theme.colors.border}`,
+                  borderRadius: '10px',
+                  color: theme.colors.text.primary,
+                  fontSize: '15px',
+                }}
+              >
+                <option value="">No Album</option>
+                {SAMPLE_ALBUMS.filter(a => a.id !== 'all').map((album) => (
+                  <option key={album.id} value={album.id}>
+                    {album.emoji} {album.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Actions */}
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                onClick={() => setShowUploadModal(false)}
+                style={{
+                  flex: 1,
+                  padding: '14px',
+                  borderRadius: '12px',
+                  border: `1px solid ${theme.colors.border}`,
+                  background: 'transparent',
+                  color: theme.colors.text.secondary,
+                  fontSize: '16px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUploadPhoto}
+                disabled={!newPhotoUrl.trim() || isSubmitting}
+                style={{
+                  flex: 1,
+                  padding: '14px',
+                  borderRadius: '12px',
+                  border: 'none',
+                  background: !newPhotoUrl.trim() ? theme.colors.background.secondary : theme.colors.accent.gradient,
+                  color: !newPhotoUrl.trim() ? theme.colors.text.muted : '#fff',
+                  fontSize: '16px',
+                  fontWeight: 600,
+                  cursor: !newPhotoUrl.trim() ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {isSubmitting ? 'Adding...' : 'Add Photo'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Photo Viewer Modal */}
       {selectedPhoto && (
