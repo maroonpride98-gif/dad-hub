@@ -25,6 +25,7 @@ export type XPReason =
   | 'challenge_completed'
   | 'game_won'
   | 'quest_completed'
+  | 'workout_completed'
   | 'referral_bonus';
 
 export const XP_VALUES: Record<XPReason, number> = {
@@ -46,6 +47,7 @@ export const XP_VALUES: Record<XPReason, number> = {
   challenge_completed: 30,
   game_won: 20,
   quest_completed: 25,
+  workout_completed: 50,
   referral_bonus: 100,
 };
 

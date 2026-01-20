@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
 import { useTheme } from './context/ThemeContext';
 import { useApp } from './context/AppContext';
 import { useFriends } from './context/FriendsContext';
@@ -11,31 +11,74 @@ import { FriendsPanel } from './components/friends';
 import { HomePage } from './components/home';
 import { ChatPage } from './components/chat';
 import { BoardPage } from './components/board';
-import { EventsPage } from './components/events';
-import { JokesPage } from './components/jokes';
-import { ProfilePage } from './components/profile';
-import { AdminPage } from './components/admin';
-import { RecipesPage } from './components/recipes';
-import { DadHacksPage } from './components/hacks';
-import { GamesPage } from './components/games';
-import { ChallengesPage } from './components/challenges';
-import { GroupsPage } from './components/groups';
-import { LeaderboardPage } from './components/leaderboard';
-import { DadWisdomPage } from './components/wisdom';
 import { StoriesBar } from './components/stories';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { ToastContainer } from './components/common/Toast';
 import { InstallPrompt, OfflineIndicator } from './components/pwa';
 import { WelcomeTour } from './components/onboarding';
-import { QuestsPanel } from './components/quests';
-import { MentorshipPage } from './components/mentorship';
-import { JokeBattlePage } from './components/battles';
-import { MemeGeneratorPage } from './components/memes';
-import { PodcastPage } from './components/podcasts';
-import { MovieNightPage } from './components/movies';
-import { ToolsPage } from './components/tools';
-import { LiveSupportPage, PanicButton } from './components/support';
-import { WatchPartyPage } from './components/watch';
+import { PanicButton } from './components/support';
+import { PageTransition } from './components/common/PageTransition';
+
+// Lazy load less frequently used pages for better initial load
+const EventsPage = lazy(() => import('./components/events').then(m => ({ default: m.EventsPage })));
+const JokesPage = lazy(() => import('./components/jokes').then(m => ({ default: m.JokesPage })));
+const ProfilePage = lazy(() => import('./components/profile').then(m => ({ default: m.ProfilePage })));
+const AdminPage = lazy(() => import('./components/admin').then(m => ({ default: m.AdminPage })));
+const RecipesPage = lazy(() => import('./components/recipes').then(m => ({ default: m.RecipesPage })));
+const DadHacksPage = lazy(() => import('./components/hacks').then(m => ({ default: m.DadHacksPage })));
+const GamesPage = lazy(() => import('./components/games').then(m => ({ default: m.GamesPage })));
+const ChallengesPage = lazy(() => import('./components/challenges').then(m => ({ default: m.ChallengesPage })));
+const GroupsPage = lazy(() => import('./components/groups').then(m => ({ default: m.GroupsPage })));
+const LeaderboardPage = lazy(() => import('./components/leaderboard').then(m => ({ default: m.LeaderboardPage })));
+const DadWisdomPage = lazy(() => import('./components/wisdom').then(m => ({ default: m.DadWisdomPage })));
+const QuestsPanel = lazy(() => import('./components/quests').then(m => ({ default: m.QuestsPanel })));
+const MentorshipPage = lazy(() => import('./components/mentorship').then(m => ({ default: m.MentorshipPage })));
+const JokeBattlePage = lazy(() => import('./components/battles').then(m => ({ default: m.JokeBattlePage })));
+const MemeGeneratorPage = lazy(() => import('./components/memes').then(m => ({ default: m.MemeGeneratorPage })));
+const PodcastPage = lazy(() => import('./components/podcasts').then(m => ({ default: m.PodcastPage })));
+const MovieNightPage = lazy(() => import('./components/movies').then(m => ({ default: m.MovieNightPage })));
+const ToolsPage = lazy(() => import('./components/tools').then(m => ({ default: m.ToolsPage })));
+const LiveSupportPage = lazy(() => import('./components/support').then(m => ({ default: m.LiveSupportPage })));
+const WatchPartyPage = lazy(() => import('./components/watch').then(m => ({ default: m.WatchPartyPage })));
+const SettingsPage = lazy(() => import('./components/settings').then(m => ({ default: m.SettingsPage })));
+const CalendarPage = lazy(() => import('./components/calendar').then(m => ({ default: m.CalendarPage })));
+const StatsPage = lazy(() => import('./components/stats').then(m => ({ default: m.StatsPage })));
+const GalleryPage = lazy(() => import('./components/gallery').then(m => ({ default: m.GalleryPage })));
+const GoalsPage = lazy(() => import('./components/goals').then(m => ({ default: m.GoalsPage })));
+
+// Loading spinner component
+const PageLoader: React.FC = () => {
+  const { theme } = useTheme();
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '60px 20px',
+        gap: '16px',
+      }}
+    >
+      <div
+        style={{
+          width: '40px',
+          height: '40px',
+          border: `3px solid ${theme.colors.border}`,
+          borderTopColor: theme.colors.accent.primary,
+          borderRadius: '50%',
+          animation: 'spin 0.8s linear infinite',
+        }}
+      />
+      <p style={{ color: theme.colors.text.muted, fontSize: '14px' }}>Loading...</p>
+      <style>{`
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
+    </div>
+  );
+};
 
 const App: React.FC = () => {
   const { theme, mode } = useTheme();
@@ -126,6 +169,16 @@ const App: React.FC = () => {
         return <LiveSupportPage />;
       case 'watch':
         return <WatchPartyPage />;
+      case 'settings':
+        return <SettingsPage />;
+      case 'calendar':
+        return <CalendarPage />;
+      case 'stats':
+        return <StatsPage />;
+      case 'gallery':
+        return <GalleryPage />;
+      case 'goals':
+        return <GoalsPage />;
       case 'profile':
         return <ProfilePage />;
       case 'admin':
@@ -188,7 +241,11 @@ const App: React.FC = () => {
       <Header onSearchClick={() => setShowSearch(true)} />
 
       <main style={{ padding: '20px 24px', paddingBottom: '120px' }}>
-        {renderContent()}
+        <Suspense fallback={<PageLoader />}>
+          <PageTransition transitionKey={activeTab}>
+            {renderContent()}
+          </PageTransition>
+        </Suspense>
       </main>
 
       <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />

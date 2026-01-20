@@ -31,6 +31,8 @@ export { Tooltip, FeatureHint } from './Tooltip';
 export { NewFeatureBadge, NotificationDot, ShimmerHighlight } from './NewFeatureBadge';
 export { ErrorBoundary } from './ErrorBoundary';
 export { ToastContainer } from './Toast';
+export { PageTransition } from './PageTransition';
+export { Confetti, useConfetti } from './Confetti';
 export {
   ShareButton,
   ShareAchievementCard,

@@ -1,5 +1,25 @@
 import { ThemeMode, CategoryColors } from '../types';
 
+// Accent color presets
+export interface AccentColor {
+  id: string;
+  name: string;
+  primary: string;
+  secondary: string;
+  emoji: string;
+}
+
+export const ACCENT_COLORS: AccentColor[] = [
+  { id: 'amber', name: 'Amber', primary: '#d97706', secondary: '#f59e0b', emoji: '🔶' },
+  { id: 'blue', name: 'Ocean Blue', primary: '#2563eb', secondary: '#3b82f6', emoji: '🔵' },
+  { id: 'green', name: 'Forest', primary: '#16a34a', secondary: '#22c55e', emoji: '🟢' },
+  { id: 'purple', name: 'Royal', primary: '#7c3aed', secondary: '#8b5cf6', emoji: '🟣' },
+  { id: 'red', name: 'Fire', primary: '#dc2626', secondary: '#ef4444', emoji: '🔴' },
+  { id: 'pink', name: 'Rose', primary: '#db2777', secondary: '#ec4899', emoji: '🩷' },
+  { id: 'teal', name: 'Teal', primary: '#0d9488', secondary: '#14b8a6', emoji: '🩵' },
+  { id: 'orange', name: 'Sunset', primary: '#ea580c', secondary: '#f97316', emoji: '🟠' },
+];
+
 export interface Theme {
   mode: ThemeMode;
   colors: {
@@ -125,6 +145,31 @@ export const getCategoryColors = (mode: ThemeMode): CategoryColors => ({
   },
 });
 
-export const getTheme = (mode: ThemeMode): Theme => {
-  return mode === 'dark' ? darkTheme : lightTheme;
+export const getTheme = (mode: ThemeMode, accentId?: string): Theme => {
+  const baseTheme = mode === 'dark' ? darkTheme : lightTheme;
+
+  if (!accentId || accentId === 'amber') {
+    return baseTheme;
+  }
+
+  const accent = ACCENT_COLORS.find(c => c.id === accentId);
+  if (!accent) {
+    return baseTheme;
+  }
+
+  return {
+    ...baseTheme,
+    colors: {
+      ...baseTheme.colors,
+      accent: {
+        primary: accent.primary,
+        secondary: accent.secondary,
+        gradient: `linear-gradient(135deg, ${accent.primary}, ${accent.secondary})`,
+      },
+    },
+    shadows: {
+      ...baseTheme.shadows,
+      accent: `0 4px 20px ${accent.primary}40`,
+    },
+  };
 };

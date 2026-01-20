@@ -1,19 +1,22 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { ThemeMode } from '../types';
-import { Theme, getTheme, getCategoryColors } from '../styles/theme';
+import { Theme, getTheme, getCategoryColors, ACCENT_COLORS } from '../styles/theme';
 import { CategoryColors } from '../types';
 
 interface ThemeContextType {
   mode: ThemeMode;
   theme: Theme;
   categoryColors: CategoryColors;
+  accentId: string;
   toggleTheme: () => void;
   setThemeMode: (mode: ThemeMode) => void;
+  setAccentColor: (accentId: string) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 const THEME_STORAGE_KEY = 'dadhub-theme';
+const ACCENT_STORAGE_KEY = 'dadhub-accent';
 
 interface ThemeProviderProps {
   children: ReactNode;
@@ -34,12 +37,26 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     return 'dark';
   });
 
-  const theme = getTheme(mode);
+  const [accentId, setAccentId] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem(ACCENT_STORAGE_KEY);
+      if (saved && ACCENT_COLORS.find(c => c.id === saved)) {
+        return saved;
+      }
+    }
+    return 'amber';
+  });
+
+  const theme = getTheme(mode, accentId);
   const categoryColors = getCategoryColors(mode);
 
   useEffect(() => {
     localStorage.setItem(THEME_STORAGE_KEY, mode);
   }, [mode]);
+
+  useEffect(() => {
+    localStorage.setItem(ACCENT_STORAGE_KEY, accentId);
+  }, [accentId]);
 
   const toggleTheme = () => {
     setMode((prev) => (prev === 'dark' ? 'light' : 'dark'));
@@ -49,8 +66,12 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     setMode(newMode);
   };
 
+  const setAccentColor = (newAccentId: string) => {
+    setAccentId(newAccentId);
+  };
+
   return (
-    <ThemeContext.Provider value={{ mode, theme, categoryColors, toggleTheme, setThemeMode }}>
+    <ThemeContext.Provider value={{ mode, theme, categoryColors, accentId, toggleTheme, setThemeMode, setAccentColor }}>
       {children}
     </ThemeContext.Provider>
   );

@@ -5,6 +5,7 @@ import { useGroups } from '../../context/GroupsContext';
 import { getCategoryInfo } from '../../types/group';
 import { Card, Button, MentionInput } from '../common';
 import { GroupPostCard } from './GroupPostCard';
+import { GroupChat } from './GroupChat';
 
 interface GroupDetailPageProps {
   groupId: string;
@@ -34,6 +35,7 @@ export const GroupDetailPage: React.FC<GroupDetailPageProps> = ({
   const [newPostContent, setNewPostContent] = useState('');
   const [isPosting, setIsPosting] = useState(false);
   const [showMembers, setShowMembers] = useState(false);
+  const [activeTab, setActiveTab] = useState<'posts' | 'chat'>('posts');
 
   const group = getGroupById(groupId);
 
@@ -180,6 +182,62 @@ export const GroupDetailPage: React.FC<GroupDetailPageProps> = ({
         </div>
       </Card>
 
+      {/* Tabs */}
+      {group.isMember && (
+        <div
+          style={{
+            display: 'flex',
+            gap: '8px',
+            padding: '4px',
+            background: theme.colors.background.secondary,
+            borderRadius: '14px',
+          }}
+        >
+          <button
+            onClick={() => setActiveTab('posts')}
+            style={{
+              flex: 1,
+              padding: '10px 16px',
+              borderRadius: '10px',
+              border: 'none',
+              background: activeTab === 'posts' ? theme.colors.card : 'transparent',
+              color: activeTab === 'posts' ? theme.colors.accent.primary : theme.colors.text.secondary,
+              fontSize: '14px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              boxShadow: activeTab === 'posts' ? '0 2px 8px rgba(0,0,0,0.1)' : 'none',
+            }}
+          >
+            📝 Posts
+          </button>
+          <button
+            onClick={() => setActiveTab('chat')}
+            style={{
+              flex: 1,
+              padding: '10px 16px',
+              borderRadius: '10px',
+              border: 'none',
+              background: activeTab === 'chat' ? theme.colors.card : 'transparent',
+              color: activeTab === 'chat' ? theme.colors.accent.primary : theme.colors.text.secondary,
+              fontSize: '14px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              boxShadow: activeTab === 'chat' ? '0 2px 8px rgba(0,0,0,0.1)' : 'none',
+            }}
+          >
+            💬 Chat
+          </button>
+        </div>
+      )}
+
       {/* Members Panel */}
       {showMembers && (
         <Card>
@@ -242,81 +300,91 @@ export const GroupDetailPage: React.FC<GroupDetailPageProps> = ({
         </Card>
       )}
 
-      {/* New Post (only for members) */}
-      {group.isMember && (
-        <Card>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <MentionInput
-              value={newPostContent}
-              onChange={setNewPostContent}
-              placeholder="Share something with the group..."
-              multiline
-              rows={3}
-            />
-            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <Button
-                onClick={handlePost}
-                disabled={isPosting || !newPostContent.trim()}
-              >
-                {isPosting ? 'Posting...' : 'Post'}
-              </Button>
-            </div>
-          </div>
-        </Card>
+      {/* Chat Tab */}
+      {activeTab === 'chat' && group.isMember && (
+        <GroupChat groupId={groupId} groupName={group.name} />
       )}
 
-      {/* Posts */}
-      <div>
-        <h3
-          style={{
-            margin: '0 0 16px 0',
-            fontSize: '18px',
-            fontWeight: 600,
-            color: theme.colors.text.primary,
-          }}
-        >
-          Posts
-        </h3>
+      {/* Posts Tab */}
+      {activeTab === 'posts' && (
+        <>
+          {/* New Post (only for members) */}
+          {group.isMember && (
+            <Card>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <MentionInput
+                  value={newPostContent}
+                  onChange={setNewPostContent}
+                  placeholder="Share something with the group..."
+                  multiline
+                  rows={3}
+                />
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <Button
+                    onClick={handlePost}
+                    disabled={isPosting || !newPostContent.trim()}
+                  >
+                    {isPosting ? 'Posting...' : 'Post'}
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          )}
 
-        {isLoadingPosts ? (
-          <Card>
-            <div
+          {/* Posts */}
+          <div>
+            <h3
               style={{
-                textAlign: 'center',
-                padding: '48px',
-                color: theme.colors.text.muted,
+                margin: '0 0 16px 0',
+                fontSize: '18px',
+                fontWeight: 600,
+                color: theme.colors.text.primary,
               }}
             >
-              Loading posts...
-            </div>
-          </Card>
-        ) : groupPosts.length === 0 ? (
-          <Card>
-            <div
-              style={{
-                textAlign: 'center',
-                padding: '48px',
-                color: theme.colors.text.muted,
-              }}
-            >
-              <div style={{ fontSize: '48px', marginBottom: '16px' }}>📝</div>
-              <p style={{ margin: 0 }}>No posts yet. Be the first to share!</p>
-            </div>
-          </Card>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {groupPosts.map(post => (
-              <GroupPostCard
-                key={post.id}
-                post={post}
-                currentUserId={user?.uid}
-                onLike={() => likeGroupPost(groupId, post.id)}
-                onReact={(emoji) => reactToGroupPost(groupId, post.id, emoji)}
-              />
-            ))}
+              Posts
+            </h3>
+
+            {isLoadingPosts ? (
+              <Card>
+                <div
+                  style={{
+                    textAlign: 'center',
+                    padding: '48px',
+                    color: theme.colors.text.muted,
+                  }}
+                >
+                  Loading posts...
+                </div>
+              </Card>
+            ) : groupPosts.length === 0 ? (
+              <Card>
+                <div
+                  style={{
+                    textAlign: 'center',
+                    padding: '48px',
+                    color: theme.colors.text.muted,
+                  }}
+                >
+                  <div style={{ fontSize: '48px', marginBottom: '16px' }}>📝</div>
+                  <p style={{ margin: 0 }}>No posts yet. Be the first to share!</p>
+                </div>
+              </Card>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {groupPosts.map(post => (
+                  <GroupPostCard
+                    key={post.id}
+                    post={post}
+                    currentUserId={user?.uid}
+                    onLike={() => likeGroupPost(groupId, post.id)}
+                    onReact={(emoji) => reactToGroupPost(groupId, post.id, emoji)}
+                  />
+                ))}
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </>
+      )}
     </div>
   );
 };

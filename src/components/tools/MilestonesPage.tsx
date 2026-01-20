@@ -36,7 +36,9 @@ export const MilestonesPage: React.FC = () => {
   const [newCategory, setNewCategory] = useState<MilestoneCategory>('first');
   const [newDate, setNewDate] = useState(new Date().toISOString().split('T')[0]);
   const [kidName, setKidName] = useState('');
+  const [newPhotoUrl, setNewPhotoUrl] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedPhotoMilestone, setSelectedPhotoMilestone] = useState<Milestone | null>(null);
 
   useEffect(() => {
     loadMilestones();
@@ -86,6 +88,7 @@ export const MilestonesPage: React.FC = () => {
         description: newDescription.trim() || null,
         category: newCategory,
         date: milestoneDate,
+        photoUrl: newPhotoUrl.trim() || null,
         isFavorite: false,
         createdAt: serverTimestamp(),
       });
@@ -138,6 +141,7 @@ export const MilestonesPage: React.FC = () => {
     setNewCategory('first');
     setNewDate(new Date().toISOString().split('T')[0]);
     setKidName('');
+    setNewPhotoUrl('');
   };
 
   const filteredMilestones =
@@ -212,6 +216,12 @@ export const MilestonesPage: React.FC = () => {
             {new Set(milestones.map((m) => m.kidName)).size}
           </p>
           <p style={{ margin: 0, fontSize: '11px', color: theme.colors.text.muted }}>Kids</p>
+        </div>
+        <div style={{ textAlign: 'center', minWidth: '80px' }}>
+          <p style={{ margin: 0, fontSize: '24px', fontWeight: 700, color: '#ec4899' }}>
+            {milestones.filter((m) => m.photoUrl).length}
+          </p>
+          <p style={{ margin: 0, fontSize: '11px', color: theme.colors.text.muted }}>Photos</p>
         </div>
       </div>
 
@@ -356,6 +366,49 @@ export const MilestonesPage: React.FC = () => {
                     <p style={{ margin: '0 0 8px 0', fontSize: '14px', color: theme.colors.text.secondary }}>
                       {milestone.description}
                     </p>
+                  )}
+
+                  {/* Photo */}
+                  {milestone.photoUrl && (
+                    <div
+                      onClick={() => setSelectedPhotoMilestone(milestone)}
+                      style={{
+                        marginTop: '12px',
+                        borderRadius: '12px',
+                        overflow: 'hidden',
+                        cursor: 'pointer',
+                        position: 'relative',
+                      }}
+                    >
+                      <img
+                        src={milestone.photoUrl}
+                        alt={milestone.title}
+                        style={{
+                          width: '100%',
+                          maxHeight: '200px',
+                          objectFit: 'cover',
+                        }}
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                      <div
+                        style={{
+                          position: 'absolute',
+                          bottom: '8px',
+                          right: '8px',
+                          background: 'rgba(0,0,0,0.6)',
+                          borderRadius: '8px',
+                          padding: '4px 8px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                        }}
+                      >
+                        <span style={{ color: '#fff', fontSize: '12px' }}>🔍</span>
+                        <span style={{ color: '#fff', fontSize: '11px' }}>View</span>
+                      </div>
+                    </div>
                   )}
 
                   {/* Delete */}
@@ -557,7 +610,7 @@ export const MilestonesPage: React.FC = () => {
               </div>
 
               {/* Description */}
-              <div style={{ marginBottom: '20px' }}>
+              <div style={{ marginBottom: '16px' }}>
                 <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: 600 }}>
                   Details (optional)
                 </label>
@@ -577,6 +630,44 @@ export const MilestonesPage: React.FC = () => {
                     resize: 'vertical',
                   }}
                 />
+              </div>
+
+              {/* Photo URL */}
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: 600 }}>
+                  Photo URL (optional)
+                </label>
+                <input
+                  type="url"
+                  value={newPhotoUrl}
+                  onChange={(e) => setNewPhotoUrl(e.target.value)}
+                  placeholder="https://example.com/photo.jpg"
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    background: theme.colors.background.secondary,
+                    border: `1px solid ${theme.colors.border}`,
+                    borderRadius: '10px',
+                    color: theme.colors.text.primary,
+                    fontSize: '15px',
+                  }}
+                />
+                {newPhotoUrl && (
+                  <div style={{ marginTop: '10px', borderRadius: '12px', overflow: 'hidden' }}>
+                    <img
+                      src={newPhotoUrl}
+                      alt="Preview"
+                      style={{
+                        width: '100%',
+                        maxHeight: '150px',
+                        objectFit: 'cover',
+                      }}
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Submit */}
@@ -601,6 +692,82 @@ export const MilestonesPage: React.FC = () => {
                 {isSubmitting ? 'Saving...' : 'Save Milestone'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Photo Viewer Modal */}
+      {selectedPhotoMilestone && selectedPhotoMilestone.photoUrl && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.9)',
+            zIndex: 1100,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+          }}
+          onClick={() => setSelectedPhotoMilestone(null)}
+        >
+          {/* Close Button */}
+          <button
+            onClick={() => setSelectedPhotoMilestone(null)}
+            style={{
+              position: 'absolute',
+              top: '20px',
+              right: '20px',
+              width: '44px',
+              height: '44px',
+              borderRadius: '50%',
+              border: 'none',
+              background: 'rgba(255,255,255,0.2)',
+              color: '#fff',
+              fontSize: '24px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            ×
+          </button>
+
+          {/* Image */}
+          <img
+            src={selectedPhotoMilestone.photoUrl}
+            alt={selectedPhotoMilestone.title}
+            style={{
+              maxWidth: '100%',
+              maxHeight: '70vh',
+              borderRadius: '12px',
+              objectFit: 'contain',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          />
+
+          {/* Caption */}
+          <div
+            style={{
+              marginTop: '20px',
+              textAlign: 'center',
+              maxWidth: '500px',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ margin: '0 0 8px 0', color: '#fff', fontSize: '20px', fontWeight: 700 }}>
+              {MILESTONE_CATEGORIES[selectedPhotoMilestone.category].emoji} {selectedPhotoMilestone.title}
+            </h3>
+            <p style={{ margin: '0 0 4px 0', color: 'rgba(255,255,255,0.7)', fontSize: '14px' }}>
+              {selectedPhotoMilestone.kidName} • {formatDate(selectedPhotoMilestone.date)}
+            </p>
+            {selectedPhotoMilestone.description && (
+              <p style={{ margin: '8px 0 0 0', color: 'rgba(255,255,255,0.8)', fontSize: '14px' }}>
+                {selectedPhotoMilestone.description}
+              </p>
+            )}
           </div>
         </div>
       )}

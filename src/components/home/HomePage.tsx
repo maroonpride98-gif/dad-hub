@@ -5,7 +5,10 @@ import { QuickActions } from './QuickActions';
 import { TrendingDiscussion } from './TrendingDiscussion';
 import { UpcomingEvent } from './UpcomingEvent';
 import { Leaderboard } from './Leaderboard';
+import { DadOfTheWeek } from './DadOfTheWeek';
+import { ActivityFeed } from './ActivityFeed';
 import { DailySpinWheel, StreakDisplay } from '../rewards';
+import { DailyTip } from '../tips';
 
 export const HomePage: React.FC = () => {
   const { discussions, events, setActiveTab, setShowNewPost } = useApp();
@@ -31,6 +34,7 @@ export const HomePage: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      <DailyTip />
       <WelcomeCard />
 
       {/* Daily Rewards Section */}
@@ -67,6 +71,8 @@ export const HomePage: React.FC = () => {
 
       <QuickActions onAction={handleQuickAction} />
 
+      <DadOfTheWeek />
+
       {discussions.length > 0 && (
         <TrendingDiscussion
           discussion={discussions[0]}
@@ -82,6 +88,8 @@ export const HomePage: React.FC = () => {
       )}
 
       <Leaderboard />
+
+      <ActivityFeed />
 
       {showSpinWheel && <DailySpinWheel onClose={() => setShowSpinWheel(false)} />}
     </div>

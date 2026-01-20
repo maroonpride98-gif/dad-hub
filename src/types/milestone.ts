@@ -30,6 +30,7 @@ export interface Milestone {
   date: Date;
   age?: string; // e.g., "2 years, 3 months"
   imageUrl?: string;
+  photoUrl?: string; // Photo gallery URL
   isFavorite?: boolean;
   createdAt: Date;
 }

@@ -56,6 +56,10 @@ const menuCategories: MenuCategory[] = [
     label: 'Resources',
     items: [
       { tab: 'wisdom', icon: '🧔', label: 'Dad Wisdom AI' },
+      { tab: 'calendar', icon: '📆', label: 'Dad Calendar' },
+      { tab: 'gallery', icon: '📸', label: 'Photo Gallery' },
+      { tab: 'goals', icon: '🎯', label: 'Goal Tracker' },
+      { tab: 'stats', icon: '📊', label: 'My Stats' },
       { tab: 'recipes', icon: '🍳', label: 'Recipes' },
       { tab: 'hacks', icon: '💡', label: 'Dad Hacks' },
       { tab: 'tools', icon: '🔧', label: 'Dad Tools' },
@@ -65,6 +69,7 @@ const menuCategories: MenuCategory[] = [
     label: 'Account',
     items: [
       { tab: 'profile', icon: '👤', label: 'My Profile' },
+      { tab: 'settings', icon: '⚙️', label: 'Settings' },
       { tab: 'admin', icon: '🛡️', label: 'Admin Panel', adminOnly: true },
     ],
   },

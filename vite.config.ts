@@ -4,6 +4,34 @@ import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
 
 export default defineConfig({
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Core vendor chunks
+          'vendor-react': ['react', 'react-dom'],
+          'vendor-firebase': ['firebase/app', 'firebase/auth', 'firebase/firestore'],
+          // Feature chunks
+          'feature-games': [
+            './src/components/games/index.ts',
+            './src/components/battles/index.ts',
+            './src/components/memes/index.ts',
+          ],
+          'feature-social': [
+            './src/components/groups/index.ts',
+            './src/components/mentorship/index.ts',
+            './src/components/support/index.ts',
+            './src/components/watch/index.ts',
+          ],
+          'feature-tools': [
+            './src/components/tools/index.ts',
+            './src/components/podcasts/index.ts',
+            './src/components/movies/index.ts',
+          ],
+        },
+      },
+    },
+  },
   plugins: [
     react(),
     VitePWA({

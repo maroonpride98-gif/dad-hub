@@ -18,7 +18,8 @@ export * from './wisdom';
 export type TabType =
   | 'home' | 'chat' | 'board' | 'events' | 'jokes' | 'recipes' | 'hacks' | 'games'
   | 'challenges' | 'profile' | 'admin' | 'groups' | 'wisdom' | 'leaderboard' | 'stories'
-  | 'quests' | 'mentorship' | 'battles' | 'memes' | 'podcasts' | 'movies' | 'tools' | 'support' | 'watch';
+  | 'quests' | 'mentorship' | 'battles' | 'memes' | 'podcasts' | 'movies' | 'tools' | 'support' | 'watch'
+  | 'settings' | 'calendar' | 'gallery' | 'goals' | 'stats';
 
 export type ThemeMode = 'dark' | 'light';
 

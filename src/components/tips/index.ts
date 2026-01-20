@@ -1,0 +1,1 @@
+export { DailyTip } from './DailyTip';

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTheme } from '../../context/ThemeContext';
+import { useGamification } from '../../context/GamificationContext';
 import { Workout, WORKOUTS } from '../../data/workouts';
 import { haptics } from '../../utils/haptics';
 
@@ -7,12 +8,14 @@ type ViewMode = 'browse' | 'workout';
 
 export const WorkoutPage: React.FC = () => {
   const { theme } = useTheme();
+  const { addXP, currentStreak } = useGamification();
   const [viewMode, setViewMode] = useState<ViewMode>('browse');
   const [selectedWorkout, setSelectedWorkout] = useState<Workout | null>(null);
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
+  const [xpEarned, setXpEarned] = useState(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   const categories = [
@@ -45,7 +48,7 @@ export const WorkoutPage: React.FC = () => {
     haptics.light();
   };
 
-  const handleExerciseComplete = () => {
+  const handleExerciseComplete = async () => {
     haptics.success();
 
     if (selectedWorkout && currentExerciseIndex < selectedWorkout.exercises.length - 1) {
@@ -56,6 +59,21 @@ export const WorkoutPage: React.FC = () => {
       setIsRunning(false);
       setIsComplete(true);
       haptics.success();
+
+      // Award XP for completing workout
+      const baseXP = 50;
+      const difficultyBonus = selectedWorkout?.difficulty === 'hard' ? 30 : selectedWorkout?.difficulty === 'medium' ? 15 : 0;
+      const streakBonus = Math.min(currentStreak, 7) * 5; // Up to 35 bonus XP for 7+ day streak
+      const totalXP = baseXP + difficultyBonus + streakBonus;
+
+      setXpEarned(totalXP);
+
+      // Add XP for workout completion
+      try {
+        await addXP('workout_completed', 1); // 1 multiplier = 50 XP base
+      } catch (error) {
+        console.error('Failed to award workout XP:', error);
+      }
     }
   };
 
@@ -140,7 +158,18 @@ export const WorkoutPage: React.FC = () => {
               </p>
               <p style={{ margin: 0, fontSize: '12px', color: theme.colors.text.muted }}>Exercises</p>
             </div>
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ margin: 0, fontSize: '24px', fontWeight: 700, color: '#f59e0b' }}>
+                +{xpEarned}
+              </p>
+              <p style={{ margin: 0, fontSize: '12px', color: theme.colors.text.muted }}>XP Earned</p>
+            </div>
           </div>
+          {currentStreak > 0 && (
+            <p style={{ margin: '0 0 16px 0', fontSize: '14px', color: theme.colors.text.secondary }}>
+              🔥 {currentStreak}-day streak bonus applied!
+            </p>
+          )}
           <button
             onClick={exitWorkout}
             style={{
