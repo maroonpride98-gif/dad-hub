@@ -90,220 +90,93 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onTabChange }) 
     setShowMoreMenu(false);
   };
 
-  const filterItems = (items: NavItem[]) =>
-    items.filter((item) => !item.adminOnly || (item.adminOnly && user?.isAdmin));
+  const visibleMoreItems = allMoreItems.filter(
+    (item) => !item.adminOnly || (item.adminOnly && user?.isAdmin)
+  );
 
   return (
     <>
-      {/* Full Screen App Launcher Menu */}
+      {/* More Menu Overlay */}
       {showMoreMenu && (
         <div
           style={{
             position: 'fixed',
             inset: 0,
-            background: mode === 'dark'
-              ? 'rgba(10, 10, 10, 0.98)'
-              : 'rgba(255, 255, 255, 0.98)',
-            backdropFilter: 'blur(20px)',
-            zIndex: 200,
+            background: 'rgba(0,0,0,0.6)',
+            zIndex: 99,
+          }}
+          onClick={() => setShowMoreMenu(false)}
+        />
+      )}
+
+      {/* More Menu Panel */}
+      {showMoreMenu && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: '90px',
+            right: '16px',
+            width: '220px',
+            maxHeight: 'calc(100vh - 140px)',
+            background: mode === 'dark' ? '#1a1a1a' : '#2d2d2d',
+            borderRadius: '16px',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+            zIndex: 101,
             display: 'flex',
             flexDirection: 'column',
-            animation: 'fadeIn 0.2s ease-out',
+            overflow: 'hidden',
           }}
         >
-          {/* Header */}
-          <div
-            style={{
-              padding: '16px 20px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              borderBottom: `1px solid ${theme.colors.border}`,
-            }}
-          >
-            <h2 style={{ margin: 0, fontSize: '24px', fontWeight: 700, color: theme.colors.text.primary }}>
-              Dad Hub
-            </h2>
-            <button
-              onClick={() => setShowMoreMenu(false)}
-              style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '50%',
-                border: 'none',
-                background: theme.colors.background.secondary,
-                color: theme.colors.text.primary,
-                fontSize: '20px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              ✕
-            </button>
-          </div>
-
-          {/* Scrollable Content */}
+          {/* Scrollable List */}
           <div
             style={{
               flex: 1,
               overflowY: 'auto',
-              padding: '20px',
+              padding: '8px',
             }}
           >
-            {menuCategories.map((category) => {
-              const visibleItems = filterItems(category.items);
-              if (visibleItems.length === 0) return null;
-
-              return (
-                <div key={category.label} style={{ marginBottom: '28px' }}>
-                  {/* Category Label */}
-                  <h3
-                    style={{
-                      margin: '0 0 14px 4px',
-                      fontSize: '13px',
-                      fontWeight: 700,
-                      color: theme.colors.accent.primary,
-                      textTransform: 'uppercase',
-                      letterSpacing: '1px',
-                    }}
-                  >
-                    {category.label}
-                  </h3>
-
-                  {/* Items Grid - 4 columns */}
-                  <div
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(4, 1fr)',
-                      gap: '8px',
-                    }}
-                  >
-                    {visibleItems.map((item) => {
-                      const isActive = activeTab === item.tab;
-                      return (
-                        <button
-                          key={item.tab}
-                          onClick={() => handleMoreItemClick(item.tab)}
-                          style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            gap: '8px',
-                            padding: '16px 8px',
-                            background: isActive
-                              ? `linear-gradient(135deg, ${theme.colors.accent.primary}25, ${theme.colors.accent.secondary}25)`
-                              : 'transparent',
-                            border: 'none',
-                            borderRadius: '16px',
-                            cursor: 'pointer',
-                            transition: 'transform 0.15s, background 0.15s',
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.transform = 'scale(1.05)';
-                            if (!isActive) {
-                              e.currentTarget.style.background = theme.colors.background.secondary;
-                            }
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.transform = 'scale(1)';
-                            if (!isActive) {
-                              e.currentTarget.style.background = 'transparent';
-                            }
-                          }}
-                        >
-                          <div
-                            style={{
-                              width: '52px',
-                              height: '52px',
-                              borderRadius: '16px',
-                              background: isActive
-                                ? `linear-gradient(135deg, ${theme.colors.accent.primary}, ${theme.colors.accent.secondary})`
-                                : theme.colors.background.secondary,
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              fontSize: '26px',
-                              boxShadow: isActive
-                                ? `0 4px 12px ${theme.colors.accent.primary}40`
-                                : 'none',
-                            }}
-                          >
-                            {item.icon}
-                          </div>
-                          <span
-                            style={{
-                              fontSize: '11px',
-                              fontWeight: isActive ? 700 : 500,
-                              color: isActive
-                                ? theme.colors.accent.primary
-                                : theme.colors.text.secondary,
-                              textAlign: 'center',
-                              lineHeight: 1.2,
-                              maxWidth: '100%',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
-                            {item.label}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Quick Actions Footer */}
-          <div
-            style={{
-              padding: '16px 20px 24px',
-              borderTop: `1px solid ${theme.colors.border}`,
-              display: 'flex',
-              justifyContent: 'center',
-              gap: '12px',
-            }}
-          >
-            {mainNavItems.map((item) => (
+            {visibleMoreItems.map((item) => (
               <button
                 key={item.tab}
                 onClick={() => handleMoreItemClick(item.tab)}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px',
-                  padding: '10px 16px',
+                  gap: '12px',
+                  padding: '12px 14px',
+                  width: '100%',
                   background: activeTab === item.tab
-                    ? theme.colors.accent.primary
-                    : theme.colors.background.secondary,
+                    ? 'rgba(217, 119, 6, 0.2)'
+                    : 'transparent',
                   border: 'none',
-                  borderRadius: '12px',
+                  borderRadius: '10px',
                   cursor: 'pointer',
-                  color: activeTab === item.tab ? '#fff' : theme.colors.text.secondary,
-                  fontSize: '13px',
-                  fontWeight: 600,
+                  color: activeTab === item.tab
+                    ? '#f59e0b'
+                    : '#ffffff',
+                  fontWeight: activeTab === item.tab ? 600 : 400,
+                  fontSize: '14px',
+                  textAlign: 'left',
+                  transition: 'background 0.15s',
+                }}
+                onMouseEnter={(e) => {
+                  if (activeTab !== item.tab) {
+                    e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (activeTab !== item.tab) {
+                    e.currentTarget.style.background = 'transparent';
+                  }
                 }}
               >
-                <span>{item.icon}</span>
+                <span style={{ fontSize: '20px' }}>{item.icon}</span>
                 {item.label}
               </button>
             ))}
           </div>
         </div>
       )}
-
-      <style>
-        {`
-          @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-          }
-        `}
-      </style>
 
       <nav
         style={{
