@@ -23,7 +23,9 @@ export type XPReason =
   | 'group_post'
   | 'wisdom_asked'
   | 'challenge_completed'
-  | 'game_won';
+  | 'game_won'
+  | 'quest_completed'
+  | 'referral_bonus';
 
 export const XP_VALUES: Record<XPReason, number> = {
   post_created: 15,
@@ -43,6 +45,8 @@ export const XP_VALUES: Record<XPReason, number> = {
   wisdom_asked: 5,
   challenge_completed: 30,
   game_won: 20,
+  quest_completed: 25,
+  referral_bonus: 100,
 };
 
 export type BadgeRarity = 'common' | 'rare' | 'epic' | 'legendary';
@@ -128,6 +132,8 @@ export interface LeaderboardEntryFull {
   level: number;
   levelIcon: string;
   isYou?: boolean;
+  title?: string;
+  titleEmoji?: string;
 }
 
 export function getLevelFromXP(xp: number): LevelDefinition {

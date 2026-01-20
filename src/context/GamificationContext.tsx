@@ -29,6 +29,9 @@ import {
   ActivityDay,
 } from '../types/gamification';
 import { BADGE_DEFINITIONS, getBadgeById } from '../data/badges';
+import { UserQuestProgress, QuestActionType } from '../types/quests';
+import { getDailyQuests } from '../data/dailyQuests';
+import { getTitleById } from '../data/titles';
 
 interface GamificationContextType {
   // XP & Levels
@@ -84,6 +87,13 @@ interface GamificationContextType {
   showLevelUp: boolean;
   newLevel: LevelDefinition | null;
   dismissLevelUp: () => void;
+
+  // Daily Quests
+  dailyQuests: UserQuestProgress[];
+  questsLoading: boolean;
+  trackQuestProgress: (actionType: QuestActionType, amount?: number) => Promise<void>;
+  claimQuestReward: (questId: string) => Promise<void>;
+  refreshDailyQuests: () => Promise<void>;
 }
 
 const GamificationContext = createContext<GamificationContextType | undefined>(undefined);
@@ -134,6 +144,10 @@ export const GamificationProvider: React.FC<GamificationProviderProps> = ({ chil
   // Level up notification
   const [showLevelUp, setShowLevelUp] = useState(false);
   const [newLevel, setNewLevel] = useState<LevelDefinition | null>(null);
+
+  // Quest state
+  const [dailyQuests, setDailyQuests] = useState<UserQuestProgress[]>([]);
+  const [questsLoading, setQuestsLoading] = useState(true);
 
   // Load user gamification data
   useEffect(() => {
@@ -474,6 +488,7 @@ export const GamificationProvider: React.FC<GamificationProviderProps> = ({ chil
           foundUser = true;
         }
 
+        const titleDef = data.activeTitle ? getTitleById(data.activeTitle) : null;
         entries.push({
           rank,
           userId: doc.id,
@@ -483,6 +498,8 @@ export const GamificationProvider: React.FC<GamificationProviderProps> = ({ chil
           level: levelInfo.level,
           levelIcon: levelInfo.icon,
           isYou: isCurrentUser,
+          title: titleDef?.name,
+          titleEmoji: titleDef?.emoji,
         });
         rank++;
       });
@@ -518,6 +535,151 @@ export const GamificationProvider: React.FC<GamificationProviderProps> = ({ chil
     setShowLevelUp(false);
     setNewLevel(null);
   }, []);
+
+  // Load daily quests
+  const loadDailyQuests = useCallback(async () => {
+    if (!user?.uid) {
+      setQuestsLoading(false);
+      return;
+    }
+
+    setQuestsLoading(true);
+    const today = new Date().toISOString().split('T')[0];
+
+    try {
+      const questProgressRef = doc(db, 'userQuestProgress', `${user.uid}_${today}`);
+      const questProgressDoc = await getDoc(questProgressRef);
+
+      if (questProgressDoc.exists()) {
+        const data = questProgressDoc.data();
+        setDailyQuests(data.quests || []);
+      } else {
+        // Generate new daily quests
+        const todayQuests = getDailyQuests(5);
+        const questProgress: UserQuestProgress[] = todayQuests.map(quest => ({
+          quest,
+          progress: 0,
+          completed: false,
+        }));
+
+        await setDoc(questProgressRef, {
+          date: today,
+          quests: questProgress,
+          completedCount: 0,
+          totalXpEarned: 0,
+        });
+
+        setDailyQuests(questProgress);
+      }
+    } catch (error) {
+      console.error('Error loading daily quests:', error);
+    } finally {
+      setQuestsLoading(false);
+    }
+  }, [user]);
+
+  // Load quests on mount and user change
+  useEffect(() => {
+    loadDailyQuests();
+  }, [loadDailyQuests]);
+
+  // Refresh daily quests
+  const refreshDailyQuests = useCallback(async () => {
+    await loadDailyQuests();
+  }, [loadDailyQuests]);
+
+  // Track quest progress
+  const trackQuestProgress = useCallback(async (actionType: QuestActionType, amount: number = 1) => {
+    if (!user?.uid || dailyQuests.length === 0) return;
+
+    const today = new Date().toISOString().split('T')[0];
+    let updated = false;
+
+    const updatedQuests = dailyQuests.map(qp => {
+      if (qp.quest.requirement.type === actionType && !qp.completed) {
+        const newProgress = Math.min(qp.progress + amount, qp.quest.requirement.target);
+        const nowCompleted = newProgress >= qp.quest.requirement.target;
+
+        if (newProgress !== qp.progress) {
+          updated = true;
+          return {
+            ...qp,
+            progress: newProgress,
+            completed: nowCompleted,
+            completedAt: nowCompleted ? new Date() : undefined,
+          };
+        }
+      }
+      return qp;
+    });
+
+    if (updated) {
+      setDailyQuests(updatedQuests);
+
+      // Check for "complete any quest" meta-quest
+      const completedCount = updatedQuests.filter(q => q.completed).length;
+      const metaUpdated = updatedQuests.map(qp => {
+        if (qp.quest.requirement.type === 'complete_any_quest' && !qp.completed) {
+          const nowCompleted = completedCount >= qp.quest.requirement.target;
+          if (nowCompleted) {
+            return { ...qp, progress: completedCount, completed: true, completedAt: new Date() };
+          }
+          return { ...qp, progress: completedCount };
+        }
+        return qp;
+      });
+
+      try {
+        await setDoc(doc(db, 'userQuestProgress', `${user.uid}_${today}`), {
+          date: today,
+          quests: metaUpdated,
+          completedCount: metaUpdated.filter(q => q.completed).length,
+          totalXpEarned: metaUpdated.filter(q => q.claimedAt).reduce((sum, q) => sum + q.quest.xpReward, 0),
+        });
+        setDailyQuests(metaUpdated);
+      } catch (error) {
+        console.error('Error updating quest progress:', error);
+      }
+    }
+  }, [user, dailyQuests]);
+
+  // Claim quest reward
+  const claimQuestReward = useCallback(async (questId: string) => {
+    if (!user?.uid) return;
+
+    const questProgress = dailyQuests.find(qp => qp.quest.id === questId);
+    if (!questProgress || !questProgress.completed || questProgress.claimedAt) return;
+
+    const today = new Date().toISOString().split('T')[0];
+    const xpReward = questProgress.quest.xpReward;
+
+    const updatedQuests = dailyQuests.map(qp => {
+      if (qp.quest.id === questId) {
+        return { ...qp, claimedAt: new Date() };
+      }
+      return qp;
+    });
+
+    setDailyQuests(updatedQuests);
+
+    try {
+      // Award XP
+      await addXP('quest_completed', xpReward / XP_VALUES.quest_completed);
+
+      // Update quest progress document
+      await setDoc(doc(db, 'userQuestProgress', `${user.uid}_${today}`), {
+        date: today,
+        quests: updatedQuests,
+        completedCount: updatedQuests.filter(q => q.completed).length,
+        totalXpEarned: updatedQuests.filter(q => q.claimedAt).reduce((sum, q) => sum + q.quest.xpReward, 0),
+      });
+
+      // Track completion for meta-quest
+      await trackQuestProgress('complete_any_quest', 0);
+    } catch (error) {
+      console.error('Error claiming quest reward:', error);
+    }
+  }, [user, dailyQuests, addXP, trackQuestProgress]);
 
   return (
     <GamificationContext.Provider
@@ -566,6 +728,13 @@ export const GamificationProvider: React.FC<GamificationProviderProps> = ({ chil
         showLevelUp,
         newLevel,
         dismissLevelUp,
+
+        // Daily Quests
+        dailyQuests,
+        questsLoading,
+        trackQuestProgress,
+        claimQuestReward,
+        refreshDailyQuests,
       }}
     >
       {children}

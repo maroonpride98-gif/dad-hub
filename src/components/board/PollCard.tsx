@@ -5,6 +5,17 @@ import { Card, Badge } from '../common';
 import { doc, updateDoc, arrayUnion, increment } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 
+export type PollCategory = 'parenting' | 'gear' | 'activities' | 'food' | 'opinions' | 'general';
+
+export const POLL_CATEGORIES: Record<PollCategory, { label: string; emoji: string; color: string }> = {
+  parenting: { label: 'Parenting', emoji: '👶', color: '#3b82f6' },
+  gear: { label: 'Dad Gear', emoji: '🎒', color: '#22c55e' },
+  activities: { label: 'Activities', emoji: '🏃', color: '#f59e0b' },
+  food: { label: 'Food & BBQ', emoji: '🍔', color: '#ef4444' },
+  opinions: { label: 'Hot Takes', emoji: '🔥', color: '#8b5cf6' },
+  general: { label: 'General', emoji: '💬', color: '#6b7280' },
+};
+
 export interface Poll {
   id: string;
   question: string;
@@ -15,6 +26,9 @@ export interface Poll {
   totalVotes: number;
   time: string;
   endsAt?: Date;
+  category?: PollCategory;
+  imageUrl?: string;
+  isHot?: boolean;
 }
 
 interface PollOption {
@@ -73,19 +87,110 @@ export const PollCard: React.FC<PollCardProps> = ({ poll }) => {
     }
   };
 
+  const categoryInfo = localPoll.category ? POLL_CATEGORIES[localPoll.category] : null;
+  const isExpired = localPoll.endsAt && new Date(localPoll.endsAt) < new Date();
+  const isHotPoll = localPoll.isHot || localPoll.totalVotes >= 10;
+
+  // Calculate time remaining
+  const getTimeRemaining = () => {
+    if (!localPoll.endsAt) return null;
+    const end = new Date(localPoll.endsAt);
+    const now = new Date();
+    if (end < now) return 'Ended';
+    const hours = Math.floor((end.getTime() - now.getTime()) / (1000 * 60 * 60));
+    if (hours < 24) return `${hours}h left`;
+    const days = Math.floor(hours / 24);
+    return `${days}d left`;
+  };
+
+  const timeRemaining = getTimeRemaining();
+
   return (
     <Card hover>
+      {/* Hot Poll Banner */}
+      {isHotPoll && !isExpired && (
+        <div
+          style={{
+            background: 'linear-gradient(90deg, #ef4444, #f97316)',
+            padding: '6px 12px',
+            marginBottom: '12px',
+            borderRadius: '8px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+          }}
+        >
+          <span style={{ fontSize: '14px' }}>🔥</span>
+          <span style={{ fontSize: '12px', fontWeight: 600, color: '#fff' }}>Hot Poll</span>
+          <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.8)', marginLeft: 'auto' }}>
+            Trending in the community
+          </span>
+        </div>
+      )}
+
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
         <div style={{ fontSize: '40px' }}>{localPoll.avatar}</div>
         <div style={{ flex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-            <Badge variant="category" category="Support">📊 Poll</Badge>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px', flexWrap: 'wrap' }}>
+            {categoryInfo ? (
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '4px 10px',
+                  background: `${categoryInfo.color}20`,
+                  borderRadius: '12px',
+                  fontSize: '12px',
+                  fontWeight: 500,
+                  color: categoryInfo.color,
+                }}
+              >
+                {categoryInfo.emoji} {categoryInfo.label}
+              </span>
+            ) : (
+              <Badge variant="category" category="Support">📊 Poll</Badge>
+            )}
             <span style={{ color: theme.colors.text.muted, fontSize: '12px' }}>{localPoll.time}</span>
+            {timeRemaining && (
+              <span
+                style={{
+                  fontSize: '11px',
+                  padding: '2px 8px',
+                  background: isExpired ? theme.colors.background.secondary : `${theme.colors.accent.primary}20`,
+                  borderRadius: '8px',
+                  color: isExpired ? theme.colors.text.muted : theme.colors.accent.primary,
+                }}
+              >
+                {timeRemaining}
+              </span>
+            )}
           </div>
 
           <h4 style={{ margin: '0 0 6px 0', fontSize: '17px', fontWeight: 700 }}>
             {localPoll.question}
           </h4>
+
+          {/* Poll Image */}
+          {localPoll.imageUrl && (
+            <div
+              style={{
+                width: '100%',
+                height: '160px',
+                borderRadius: '12px',
+                overflow: 'hidden',
+                marginBottom: '12px',
+                background: theme.colors.background.secondary,
+              }}
+            >
+              <img
+                src={localPoll.imageUrl}
+                alt="Poll image"
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            </div>
+          )}
+
           <p style={{ margin: '0 0 16px 0', color: theme.colors.text.muted, fontSize: '13px' }}>
             by {localPoll.author} • {localPoll.totalVotes} vote{localPoll.totalVotes !== 1 ? 's' : ''}
           </p>

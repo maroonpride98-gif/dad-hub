@@ -27,6 +27,15 @@ import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { ToastContainer } from './components/common/Toast';
 import { InstallPrompt, OfflineIndicator } from './components/pwa';
 import { WelcomeTour } from './components/onboarding';
+import { QuestsPanel } from './components/quests';
+import { MentorshipPage } from './components/mentorship';
+import { JokeBattlePage } from './components/battles';
+import { MemeGeneratorPage } from './components/memes';
+import { PodcastPage } from './components/podcasts';
+import { MovieNightPage } from './components/movies';
+import { ToolsPage } from './components/tools';
+import { LiveSupportPage, PanicButton } from './components/support';
+import { WatchPartyPage } from './components/watch';
 
 const App: React.FC = () => {
   const { theme, mode } = useTheme();
@@ -99,6 +108,24 @@ const App: React.FC = () => {
         return <LeaderboardPage />;
       case 'wisdom':
         return <DadWisdomPage />;
+      case 'quests':
+        return <QuestsPanel />;
+      case 'mentorship':
+        return <MentorshipPage />;
+      case 'battles':
+        return <JokeBattlePage />;
+      case 'memes':
+        return <MemeGeneratorPage />;
+      case 'podcasts':
+        return <PodcastPage />;
+      case 'movies':
+        return <MovieNightPage />;
+      case 'tools':
+        return <ToolsPage />;
+      case 'support':
+        return <LiveSupportPage />;
+      case 'watch':
+        return <WatchPartyPage />;
       case 'profile':
         return <ProfilePage />;
       case 'admin':
@@ -179,6 +206,9 @@ const App: React.FC = () => {
 
       {/* Onboarding Tour */}
       <WelcomeTour />
+
+      {/* Panic Button - Always visible for quick help */}
+      <PanicButton />
     </div>
   );
 };

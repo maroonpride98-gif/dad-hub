@@ -19,12 +19,21 @@ const mainNavItems: NavItem[] = [
 ];
 
 const moreMenuItems: NavItem[] = [
+  { tab: 'quests', icon: '⚔️', label: 'Daily Quests' },
   { tab: 'groups', icon: '👥', label: 'Dad Groups' },
+  { tab: 'mentorship', icon: '🤝', label: 'Mentorship' },
+  { tab: 'battles', icon: '⚡', label: 'Joke Battles' },
+  { tab: 'support', icon: '💪', label: 'Dad Support' },
+  { tab: 'watch', icon: '🎬', label: 'Watch Parties' },
   { tab: 'wisdom', icon: '🧔', label: 'Dad Wisdom AI' },
   { tab: 'leaderboard', icon: '🏅', label: 'Leaderboard' },
   { tab: 'jokes', icon: '😂', label: 'Dad Jokes' },
+  { tab: 'memes', icon: '🖼️', label: 'Meme Generator' },
+  { tab: 'podcasts', icon: '🎙️', label: 'Podcasts' },
+  { tab: 'movies', icon: '🍿', label: 'Movie Night' },
   { tab: 'recipes', icon: '🍳', label: 'Recipes' },
   { tab: 'hacks', icon: '💡', label: 'Dad Hacks' },
+  { tab: 'tools', icon: '🔧', label: 'Dad Tools' },
   { tab: 'games', icon: '🎮', label: 'Mini Games' },
   { tab: 'challenges', icon: '🏆', label: 'Challenges' },
   { tab: 'profile', icon: '👤', label: 'My Profile' },

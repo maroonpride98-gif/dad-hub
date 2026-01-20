@@ -138,6 +138,23 @@ export const LeaderboardEntry: React.FC<LeaderboardEntryProps> = ({
           >
             Level {entry.level}
           </span>
+          {entry.title && (
+            <>
+              <span style={{ color: theme.colors.text.muted }}>•</span>
+              <span
+                style={{
+                  fontSize: '11px',
+                  color: theme.colors.text.secondary,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+              >
+                {entry.titleEmoji && <span>{entry.titleEmoji}</span>}
+                {entry.title}
+              </span>
+            </>
+          )}
         </div>
       </div>
 

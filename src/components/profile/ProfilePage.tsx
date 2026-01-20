@@ -10,6 +10,8 @@ import { DadLevel } from './DadLevel';
 import { ActivityFeed } from './ActivityFeed';
 import { Achievements } from './Achievements';
 import { EditProfileModal } from './EditProfileModal';
+import { TitleSelector } from './TitleSelector';
+import { AchievementShowcase } from './AchievementShowcase';
 
 export const ProfilePage: React.FC = () => {
   const { theme, mode, toggleTheme } = useTheme();
@@ -81,6 +83,12 @@ export const ProfilePage: React.FC = () => {
           {user.avatar}
         </div>
         <h2 style={{ margin: '0 0 4px 0', fontSize: '26px', fontWeight: 800 }}>{user.name}</h2>
+
+        {/* Title Selector */}
+        <div style={{ marginBottom: '8px' }}>
+          <TitleSelector />
+        </div>
+
         <p style={{ margin: '0 0 4px 0', color: theme.colors.text.muted, fontSize: '13px' }}>
           {user.email}
         </p>
@@ -128,6 +136,9 @@ export const ProfilePage: React.FC = () => {
 
       {/* Dad Level */}
       <DadLevel points={user.points} />
+
+      {/* Achievement Showcase */}
+      <AchievementShowcase />
 
       {/* Achievements */}
       <Achievements />

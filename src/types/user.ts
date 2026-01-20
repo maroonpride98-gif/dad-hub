@@ -22,6 +22,16 @@ export interface User {
   status?: 'active' | 'suspended' | 'banned';
   createdAt?: Date;
   lastLogin?: Date;
+  // Titles
+  activeTitle?: string;
+  unlockedTitles?: string[];
+  // Showcase
+  showcaseSlots?: Array<{
+    type: 'badge' | 'title' | 'stat' | 'empty';
+    id?: string;
+    value?: string | number;
+    label?: string;
+  }>;
 }
 
 export interface Badge {

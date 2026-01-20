@@ -2,19 +2,32 @@ import React, { useState } from 'react';
 import { useTheme } from '../../context/ThemeContext';
 import { useApp } from '../../context/AppContext';
 import { Card, Button, Input } from '../common';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { db } from '../../config/firebase';
+import { PollCategory, POLL_CATEGORIES } from './PollCard';
 
 interface CreatePollFormProps {
   onClose: () => void;
   onCreated: () => void;
 }
 
+type ExpirationOption = '1h' | '24h' | '3d' | '7d' | 'none';
+
+const EXPIRATION_OPTIONS: { value: ExpirationOption; label: string }[] = [
+  { value: '1h', label: '1 Hour' },
+  { value: '24h', label: '24 Hours' },
+  { value: '3d', label: '3 Days' },
+  { value: '7d', label: '7 Days' },
+  { value: 'none', label: 'No Expiration' },
+];
+
 export const CreatePollForm: React.FC<CreatePollFormProps> = ({ onClose, onCreated }) => {
   const { theme } = useTheme();
   const { user } = useApp();
   const [question, setQuestion] = useState('');
   const [options, setOptions] = useState(['', '']);
+  const [category, setCategory] = useState<PollCategory>('general');
+  const [expiration, setExpiration] = useState<ExpirationOption>('24h');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const addOption = () => {
@@ -33,12 +46,30 @@ export const CreatePollForm: React.FC<CreatePollFormProps> = ({ onClose, onCreat
     setOptions(options.map((opt, i) => i === index ? value : opt));
   };
 
+  const getExpirationDate = (): Date | null => {
+    const now = new Date();
+    switch (expiration) {
+      case '1h':
+        return new Date(now.getTime() + 60 * 60 * 1000);
+      case '24h':
+        return new Date(now.getTime() + 24 * 60 * 60 * 1000);
+      case '3d':
+        return new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+      case '7d':
+        return new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+      default:
+        return null;
+    }
+  };
+
   const handleSubmit = async () => {
     const validOptions = options.filter(opt => opt.trim());
     if (!question.trim() || validOptions.length < 2 || isSubmitting) return;
 
     setIsSubmitting(true);
     try {
+      const expirationDate = getExpirationDate();
+
       await addDoc(collection(db, 'polls'), {
         question: question.trim(),
         options: validOptions.map((text, i) => ({
@@ -51,6 +82,8 @@ export const CreatePollForm: React.FC<CreatePollFormProps> = ({ onClose, onCreat
         author: user.name,
         avatar: user.avatar,
         totalVotes: 0,
+        category,
+        endsAt: expirationDate ? Timestamp.fromDate(expirationDate) : null,
         createdAt: serverTimestamp(),
       });
 
@@ -69,6 +102,40 @@ export const CreatePollForm: React.FC<CreatePollFormProps> = ({ onClose, onCreat
       <h4 style={{ margin: '0 0 16px 0', fontSize: '18px', fontWeight: 700 }}>
         📊 Create a Poll
       </h4>
+
+      {/* Category Selection */}
+      <div style={{ marginBottom: '16px' }}>
+        <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: 600 }}>
+          Category
+        </label>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+          {(Object.entries(POLL_CATEGORIES) as [PollCategory, typeof POLL_CATEGORIES[PollCategory]][]).map(
+            ([key, value]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setCategory(key)}
+                style={{
+                  padding: '8px 14px',
+                  background: category === key ? `${value.color}20` : theme.colors.background.secondary,
+                  border: category === key ? `2px solid ${value.color}` : `1px solid ${theme.colors.border}`,
+                  borderRadius: '20px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  color: category === key ? value.color : theme.colors.text.secondary,
+                  fontSize: '13px',
+                  fontWeight: category === key ? 600 : 400,
+                }}
+              >
+                <span>{value.emoji}</span>
+                <span>{value.label}</span>
+              </button>
+            )
+          )}
+        </div>
+      </div>
 
       <div style={{ marginBottom: '16px' }}>
         <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: 600 }}>
@@ -128,6 +195,34 @@ export const CreatePollForm: React.FC<CreatePollFormProps> = ({ onClose, onCreat
             + Add Option
           </button>
         )}
+      </div>
+
+      {/* Expiration Selection */}
+      <div style={{ marginBottom: '16px' }}>
+        <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: 600 }}>
+          Poll Duration
+        </label>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+          {EXPIRATION_OPTIONS.map(({ value, label }) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setExpiration(value)}
+              style={{
+                padding: '8px 14px',
+                background: expiration === value ? `${theme.colors.accent.primary}20` : theme.colors.background.secondary,
+                border: expiration === value ? `2px solid ${theme.colors.accent.primary}` : `1px solid ${theme.colors.border}`,
+                borderRadius: '20px',
+                cursor: 'pointer',
+                color: expiration === value ? theme.colors.accent.primary : theme.colors.text.secondary,
+                fontSize: '13px',
+                fontWeight: expiration === value ? 600 : 400,
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div style={{ display: 'flex', gap: '12px' }}>

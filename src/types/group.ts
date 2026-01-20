@@ -33,6 +33,14 @@ export const GROUP_CATEGORIES: { category: GroupCategory; icon: string; color: s
 
 export type MemberRole = 'owner' | 'admin' | 'member';
 
+export interface GroupLocation {
+  city: string;
+  state?: string;
+  country: string;
+  latitude?: number;
+  longitude?: number;
+}
+
 export interface Group {
   id: string;
   name: string;
@@ -49,6 +57,10 @@ export interface Group {
   coverImage?: string;
   isMember?: boolean;
   userRole?: MemberRole;
+  // Location fields for local groups
+  isLocalGroup?: boolean;
+  location?: GroupLocation;
+  maxDistance?: number; // in miles
 }
 
 export interface GroupMember {

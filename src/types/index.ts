@@ -15,7 +15,10 @@ export * from './group';
 export * from './story';
 export * from './wisdom';
 
-export type TabType = 'home' | 'chat' | 'board' | 'events' | 'jokes' | 'recipes' | 'hacks' | 'games' | 'challenges' | 'profile' | 'admin' | 'groups' | 'wisdom' | 'leaderboard' | 'stories';
+export type TabType =
+  | 'home' | 'chat' | 'board' | 'events' | 'jokes' | 'recipes' | 'hacks' | 'games'
+  | 'challenges' | 'profile' | 'admin' | 'groups' | 'wisdom' | 'leaderboard' | 'stories'
+  | 'quests' | 'mentorship' | 'battles' | 'memes' | 'podcasts' | 'movies' | 'tools' | 'support' | 'watch';
 
 export type ThemeMode = 'dark' | 'light';
 
